@@ -1,6 +1,6 @@
 package org.example.classpiserver.service;
 
-import org.example.classpiserver.dto.CourseRequest;
+import org.example.classpiserver.dto.*;
 import org.example.classpiserver.entity.*;
 import org.example.classpiserver.mapper.UserMapper;
 import org.example.classpiserver.service.UserService;
@@ -55,6 +55,11 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public List<Long> getArchivedCourseIdByAccount(String account) {
+        return userMapper.getArchivedCourseIdByAccount(account);
+    }
+
+    @Override
     public Accounts getAccount(String account) {
        return userMapper.getAccount(account);
     }
@@ -93,7 +98,7 @@ public class UserServiceImpl implements UserService {
         Course course = userMapper.getCourseByCourseId(courseId);
         if (course == null) return false;
         course.setIs_pinned(isPinned);
-        return userMapper.updateCourse(isPinned,courseId);
+        return userMapper.updateCoursePin(isPinned,courseId);
     }
 
     @Override
@@ -129,8 +134,33 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public boolean deleteCourse(Long courseId) {
-        return userMapper.deleteCourse(courseId);
+    public boolean leaveCourse(String account, Long courseId) {
+        return userMapper.leaveCourse(courseId, account);
+    }
+
+    @Override
+    public boolean updateCourseInfo(CourseUpdateRequest request) {
+        if (request == null || request.getId() == null) {
+            return false;
+        }
+        return userMapper.updateCourseInfo(request);
+    }
+
+    @Override
+    public boolean archiveCourse(ArchiveCourseRequest request) {
+        if (request == null || request.getAccount() == null || request.getClass_id() == null) {
+            return false;
+        }
+        return userMapper.setCourseArchived(
+                request.getAccount(),
+                request.getClass_id(),
+                request.isArchived() ? 1 : 0
+        );
+    }
+
+    @Override
+    public List<CourseMember> getCourseMembers(Long classId) {
+        return userMapper.getCourseMembers(classId);
     }
 
     @Override
@@ -138,7 +168,9 @@ public class UserServiceImpl implements UserService {
         try {
             userMapper.addHomework(homework);
             Integer homeworkId = userMapper.getLastInsertId();
+            userMapper.setHomeworkContentId(homeworkId, homeworkId);
             userMapper.addCourses_homework(class_id, homeworkId);
+            notifyHomeworkPublished(class_id, homeworkId, homework.getName());
             return true;
         } catch (Exception e) {
             System.err.println(userMapper.getLastInsertId());
@@ -187,5 +219,89 @@ public class UserServiceImpl implements UserService {
     @Override
     public boolean addContent(Content content) {
         return userMapper.addContent(content);
+    }
+
+    @Override
+    public boolean updateAccount(Accounts account) {
+        if (account == null || account.getAccount() == null || account.getAccount().isBlank()) {
+            return false;
+        }
+        Accounts existing = userMapper.getAccount(account.getAccount());
+        if (existing == null) {
+            return false;
+        }
+        if (account.getName() != null) {
+            existing.setName(account.getName());
+        }
+        if (account.getMechanism() != null) {
+            existing.setMechanism(account.getMechanism());
+        }
+        if (account.getEmail_or_phone() != null) {
+            existing.setEmail_or_phone(account.getEmail_or_phone());
+        }
+        if (account.getStatus_number() != null) {
+            existing.setStatus_number(account.getStatus_number());
+        }
+        if (account.getStatus() != null) {
+            existing.setStatus(account.getStatus());
+        }
+        return userMapper.updateAccount(existing);
+    }
+
+    @Override
+    public List<Notification> getNotifications(String account) {
+        return userMapper.getNotifications(account);
+    }
+
+    @Override
+    public Integer getUnreadNotificationCount(String account) {
+        return userMapper.getUnreadNotificationCount(account);
+    }
+
+    @Override
+    public boolean markNotificationRead(Integer id, String account) {
+        return userMapper.markNotificationRead(id, account);
+    }
+
+    @Override
+    public boolean remindHomework(RemindHomeworkRequest request) {
+        if (request == null || request.getHomework_id() == null || request.getClass_id() == null) {
+            return false;
+        }
+        Homework homework = userMapper.getHomework(request.getHomework_id());
+        if (homework == null) {
+            return false;
+        }
+        Long contentId = homework.getContent_id() > 0 ? (long) homework.getContent_id() : request.getHomework_id().longValue();
+        List<String> accounts = userMapper.getUnsubmittedAccounts(request.getClass_id(), contentId);
+        if (accounts.isEmpty()) {
+            return false;
+        }
+        for (String studentAccount : accounts) {
+            Notification notification = new Notification();
+            notification.setAccount(studentAccount);
+            notification.setClass_id(request.getClass_id());
+            notification.setHomework_id(request.getHomework_id());
+            notification.setType("remind");
+            notification.setMessage("老师催交作业：" + homework.getName());
+            userMapper.addNotification(notification);
+        }
+        return true;
+    }
+
+    private void notifyHomeworkPublished(Integer classId, Integer homeworkId, String homeworkName) {
+        List<CourseMember> members = userMapper.getCourseMembers(classId.longValue());
+        for (CourseMember member : members) {
+            if ("老师".equals(member.getStatus())) {
+                continue;
+            }
+            Notification notification = new Notification();
+            notification.setAccount(member.getAccount());
+            notification.setClass_id(classId);
+            notification.setHomework_id(homeworkId);
+            notification.setType("homework");
+            notification.setMessage("新作业发布：" + homeworkName);
+            userMapper.addNotification(notification);
+        }
     }
 }

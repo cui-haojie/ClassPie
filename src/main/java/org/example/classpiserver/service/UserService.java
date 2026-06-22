@@ -1,7 +1,6 @@
 package org.example.classpiserver.service;
 
-import org.apache.ibatis.annotations.Param;
-import org.example.classpiserver.dto.CourseRequest;
+import org.example.classpiserver.dto.*;
 import org.example.classpiserver.entity.*;
 
 import java.util.List;
@@ -11,6 +10,7 @@ public interface UserService {
     boolean changePassword(String password, String account);
     Accounts login(String account, String password);
     List<Long> getCourseIdByAccount(String account);
+    List<Long> getArchivedCourseIdByAccount(String account);
     boolean selectAccountByAccount(String account);
     Accounts getAccount(String account);
     Course getCourseByCode(String code, String account);
@@ -22,7 +22,10 @@ public interface UserService {
     boolean addTeacherCourse(String account);
     Course getCourseById(Long id);
     Integer getCountByCourseId(Long id);
-    boolean deleteCourse(Long id);
+    boolean leaveCourse(String account, Long id);
+    boolean updateCourseInfo(CourseUpdateRequest request);
+    boolean archiveCourse(ArchiveCourseRequest request);
+    List<CourseMember> getCourseMembers(Long classId);
     boolean addHomework(Homework homework,Integer class_id);
     Integer getCountByClassId(Integer class_id);
     List<Homework> getHomeworkByClassId(Integer class_id);
@@ -31,4 +34,9 @@ public interface UserService {
     List<Content> getContentById(Long id);
     boolean setContentScore(int newScore,Long content_id,String account);
     boolean addContent(Content content);
+    boolean updateAccount(Accounts account);
+    List<Notification> getNotifications(String account);
+    Integer getUnreadNotificationCount(String account);
+    boolean markNotificationRead(Integer id, String account);
+    boolean remindHomework(RemindHomeworkRequest request);
 }

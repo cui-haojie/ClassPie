@@ -2,6 +2,7 @@ package org.example.classpiserver.mapper;
 
 import org.apache.ibatis.annotations.*;
 import org.example.classpiserver.dto.CourseRequest;
+import org.example.classpiserver.dto.CourseUpdateRequest;
 import org.example.classpiserver.entity.*;
 
 import java.util.List;
@@ -26,11 +27,14 @@ public interface UserMapper {
             "(#{course.teacher_account}, #{course.class_time}, #{course.class_name}, #{course.selected_classes})")
     boolean addCourse(@Param("course") CourseRequest course);
 
-    @Delete("delete from account_course where class_id = #{id}")
-    boolean deleteCourse(@Param("id") Long id);
+    @Delete("delete from account_course where class_id = #{id} and account = #{account}")
+    boolean leaveCourse(@Param("id") Long id, @Param("account") String account);
 
-    @Select("select class_id from account_course where account = #{account}")
+    @Select("select class_id from account_course where account = #{account} and is_archived = 0")
     List<Long> getCourseIdByAccount(@Param("account") String account);
+
+    @Select("select class_id from account_course where account = #{account} and is_archived = 1")
+    List<Long> getArchivedCourseIdByAccount(@Param("account") String account);
 
     @Insert("insert into account_course (account, class_id) values (#{account}, #{class_id})")
     Course insertCourse(Account_course account_course);
@@ -48,7 +52,7 @@ public interface UserMapper {
     Course getCourseByCourseId(@Param("id") Long id);
 
     @Update("update courses set is_pinned = #{is_pinned} where id = #{id}")
-    boolean updateCourse(@Param("is_pinned") boolean is_pinned, @Param("id") Long id);
+    boolean updateCoursePin(@Param("is_pinned") boolean is_pinned, @Param("id") Long id);
 
     @Select("select name from accounts where account = #{account}")
     String getAccountName(@Param("account") String account);
@@ -78,13 +82,43 @@ public interface UserMapper {
     @Select("select homework_id from courses_homework where class_id = #{class_id}")
     List<Integer> getCourseIdByClassId(@Param("class_id") Integer class_id);
 
+    @Update("update courses set class_name = #{class_name}, class_time = #{class_time}, selected_classes = #{selected_classes} where id = #{id} and teacher_account = #{teacher_account}")
+    boolean updateCourseInfo(CourseUpdateRequest course);
+
+    @Update("update accounts set name = #{name}, mechanism = #{mechanism}, email_or_phone = #{email_or_phone}, status_number = #{status_number}, status = #{status} where account = #{account}")
+    boolean updateAccount(Accounts account);
+
+    @Update("update account_course set is_archived = #{archived} where account = #{account} and class_id = #{class_id}")
+    boolean setCourseArchived(@Param("account") String account, @Param("class_id") Long class_id, @Param("archived") int archived);
+
+    @Select("SELECT a.account, a.name, a.status, a.status_number FROM accounts a INNER JOIN account_course ac ON a.account = ac.account WHERE ac.class_id = #{classId} AND ac.is_archived = 0")
+    List<CourseMember> getCourseMembers(@Param("classId") Long classId);
+
+    @Select("SELECT ac.account FROM account_course ac LEFT JOIN content c ON c.account = ac.account AND c.content_id = #{contentId} WHERE ac.class_id = #{classId} AND ac.is_archived = 0 AND c.account IS NULL")
+    List<String> getUnsubmittedAccounts(@Param("classId") Integer classId, @Param("contentId") Long contentId);
+
+    @Insert("insert into notification (account, class_id, homework_id, type, message, is_read) values (#{account}, #{class_id}, #{homework_id}, #{type}, #{message}, 0)")
+    boolean addNotification(Notification notification);
+
+    @Select("select * from notification where account = #{account} order by id desc limit 50")
+    List<Notification> getNotifications(@Param("account") String account);
+
+    @Update("update notification set is_read = 1 where id = #{id} and account = #{account}")
+    boolean markNotificationRead(@Param("id") Integer id, @Param("account") String account);
+
+    @Select("select count(*) from notification where account = #{account} and is_read = 0")
+    Integer getUnreadNotificationCount(@Param("account") String account);
+
+    @Update("update homework set content_id = #{content_id} where homework_id = #{homework_id}")
+    boolean setHomeworkContentId(@Param("homework_id") Integer homework_id, @Param("content_id") Integer content_id);
+
     @Select("select status from accounts where account = #{account}")
     String getAccountStatus(@Param("account") String account);
 
     @Select("select * from content where content_id = #{content_id}")
     List<Content> getContentByContentId(@Param("content_id") Long content_id);
 
-    @Update("UPDATE content set score = #{newScore} where content_id = #{conten_id} and account = #{account}")
+    @Update("UPDATE content set score = #{newScore} where content_id = #{content_id} and account = #{account}")
     boolean setContentScore(@Param("newScore") int newScore,@Param("content_id") Long content_id,@Param("account") String account);
 
     @Insert("insert into content (content_id,account,score,details) values (#{content.content_id}, #{content.account}, #{content.score}, #{content.details});")

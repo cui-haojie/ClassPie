@@ -6,6 +6,8 @@ import org.example.classpiserver.entity.Course;
 import org.example.classpiserver.entity.Courses_homework;
 import org.example.classpiserver.entity.Homework;
 import org.example.classpiserver.entity.Content;
+import org.example.classpiserver.entity.CourseMember;
+import org.example.classpiserver.entity.Notification;
 import org.example.classpiserver.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -23,6 +25,11 @@ public class UserController {
     @PostMapping("/courses")
     public List<Course> getCourses(@RequestBody AccountRequest accountRequest) {
         return userService.getCourseByCourseId(userService.getCourseIdByAccount(accountRequest.getAccount()));
+    }
+
+    @PostMapping("/archivedCourses")
+    public List<Course> getArchivedCourses(@RequestBody AccountRequest accountRequest) {
+        return userService.getCourseByCourseId(userService.getArchivedCourseIdByAccount(accountRequest.getAccount()));
     }
 
     @PostMapping("/account")
@@ -91,8 +98,23 @@ public class UserController {
     }
 
     @PostMapping("/deleteCourse")
-    public boolean deleteCourse(@RequestBody CourseIdRequest request) {
-        return userService.deleteCourse(request.getId());
+    public boolean leaveCourse(@RequestBody LeaveCourseRequest request) {
+        return userService.leaveCourse(request.getAccount(), request.getId());
+    }
+
+    @PutMapping("/updateCourse")
+    public boolean updateCourse(@RequestBody CourseUpdateRequest request) {
+        return userService.updateCourseInfo(request);
+    }
+
+    @PutMapping("/archiveCourse")
+    public boolean archiveCourse(@RequestBody ArchiveCourseRequest request) {
+        return userService.archiveCourse(request);
+    }
+
+    @PostMapping("/getCourseMembers")
+    public List<CourseMember> getCourseMembers(@RequestBody CourseIdRequest request) {
+        return userService.getCourseMembers(request.getId());
     }
 
     @PostMapping("/addHomework")
@@ -133,5 +155,30 @@ public class UserController {
     @PostMapping("/addContent")
     public boolean addContent(@RequestBody Content content) {
         return userService.addContent(content);
+    }
+
+    @PutMapping("/updateAccount")
+    public boolean updateAccount(@RequestBody Accounts account) {
+        return userService.updateAccount(account);
+    }
+
+    @PostMapping("/notifications")
+    public List<Notification> getNotifications(@RequestBody AccountRequest request) {
+        return userService.getNotifications(request.getAccount());
+    }
+
+    @PostMapping("/notificationCount")
+    public Integer getNotificationCount(@RequestBody AccountRequest request) {
+        return userService.getUnreadNotificationCount(request.getAccount());
+    }
+
+    @PutMapping("/readNotification")
+    public boolean readNotification(@RequestBody Notification request) {
+        return userService.markNotificationRead(request.getId(), request.getAccount());
+    }
+
+    @PostMapping("/remindHomework")
+    public boolean remindHomework(@RequestBody RemindHomeworkRequest request) {
+        return userService.remindHomework(request);
     }
 }

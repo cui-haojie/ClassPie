@@ -1,0 +1,22 @@
+
+server:
+  port: 9090
+
+spring:
+  datasource:
+    url: jdbc:mysql:///t_class?serverTimezone=UTC
+    username: root
+    password: cuihaojie123.
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: false
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true

@@ -15,6 +15,7 @@ private String class_time;
 private String selected_classes;
 private String code;
 private Boolean is_pinned;
+private Integer school_class_id;
 
     public String getClass_name() {
         return class_name;
@@ -70,5 +71,13 @@ private Boolean is_pinned;
 
     public void setIs_pinned(Boolean is_pinned) {
         this.is_pinned = is_pinned;
+    }
+
+    public Integer getSchool_class_id() {
+        return school_class_id;
+    }
+
+    public void setSchool_class_id(Integer school_class_id) {
+        this.school_class_id = school_class_id;
     }
 }

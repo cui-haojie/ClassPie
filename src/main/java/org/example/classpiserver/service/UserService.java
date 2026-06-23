@@ -7,6 +7,7 @@ import java.util.List;
 
 public interface UserService {
     boolean addAccount(Accounts account);
+    boolean register(RegisterRequest request);
     boolean changePassword(String password, String account);
     Accounts login(String account, String password);
     List<Long> getCourseIdByAccount(String account);
@@ -18,7 +19,11 @@ public interface UserService {
     void addCourse(String account,Long class_id);
     boolean togglePinCourse(Long courseId, Boolean isPinned);
     String getAccountName(String account);
-    boolean addCourse(CourseRequest course);
+    Course addCourse(CourseRequest course);
+    List<SchoolClass> listSchoolClasses();
+    SchoolClass createSchoolClass(SchoolClassRequest request);
+    boolean joinStudentClass(JoinStudentClassRequest request);
+    List<SchoolClass> getStudentSchoolClasses(String account);
     boolean addTeacherCourse(String account);
     Course getCourseById(Long id);
     Integer getCountByCourseId(Long id);

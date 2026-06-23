@@ -9,9 +9,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Optional;
+import java.util.Set;
 
 @Service
 @Transactional
@@ -22,13 +22,41 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public boolean addAccount(Accounts account) {
-        account.setEmail_or_phone("yes");
-        account.setStatus_number("12857");
+        if (account.getEmail_or_phone() == null || account.getEmail_or_phone().isBlank()) {
+            account.setEmail_or_phone("yes");
+        }
+        if (account.getStatus_number() == null || account.getStatus_number().isBlank()) {
+            account.setStatus_number("12857");
+        }
          account.setPassword(encryptPassword(account.getPassword()));
          if(userMapper.selectAccountByAccount(account.getAccount()) != null) {
              return false;
          }
         return userMapper.addUser(account);
+    }
+
+    @Override
+    public boolean register(RegisterRequest req) {
+        if (req == null || req.getAccount() == null || req.getAccount().isBlank()) {
+            return false;
+        }
+        Accounts account = new Accounts();
+        account.setAccount(req.getAccount());
+        account.setPassword(req.getPassword());
+        account.setName(req.getName());
+        account.setStatus(req.getStatus());
+        account.setMechanism(req.getMechanism());
+        account.setStatus_number(req.getStatus_number());
+        if (!addAccount(account)) {
+            return false;
+        }
+        if ("学生".equals(req.getStatus())) {
+            for (Integer classId : resolveSchoolClassIds(req.getSchool_class_id(), req.getSchool_class_ids())) {
+                userMapper.insertStudentClass(req.getAccount(), classId);
+                enrollStudentInExistingCourses(req.getAccount(), classId);
+            }
+        }
+        return true;
     }
 
     @Override
@@ -107,8 +135,146 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public boolean addCourse(CourseRequest course){
-        return userMapper.addCourse(course);
+    public Course addCourse(CourseRequest course) {
+        if (course == null || course.getTeacher_account() == null) {
+            return null;
+        }
+        List<Integer> schoolClassIds = resolveSchoolClassIds(course.getSchool_class_id(), course.getSchool_class_ids());
+        if (!schoolClassIds.isEmpty()) {
+            List<String> classNames = new ArrayList<>();
+            for (Integer classId : schoolClassIds) {
+                SchoolClass schoolClass = userMapper.getSchoolClassById(classId);
+                if (schoolClass != null && schoolClass.getName() != null) {
+                    classNames.add(schoolClass.getName());
+                }
+            }
+            if ((course.getSelected_classes() == null || course.getSelected_classes().isBlank()) && !classNames.isEmpty()) {
+                course.setSelected_classes(String.join("、", classNames));
+            }
+            course.setSchool_class_id(schoolClassIds.get(0));
+        } else {
+            course.setSchool_class_id(null);
+        }
+        course.setCode(generateUniqueCourseCode());
+        if (!userMapper.addCourse(course)) {
+            return null;
+        }
+        Long courseId = userMapper.getLastInsertCourseId();
+        if (courseId == null) {
+            return null;
+        }
+        enrollAccountIfAbsent(course.getTeacher_account(), courseId);
+        Set<String> enrolledStudents = new LinkedHashSet<>();
+        for (Integer classId : schoolClassIds) {
+            userMapper.insertCourseSchoolClass(courseId, classId);
+            for (String studentAccount : userMapper.getStudentAccountsBySchoolClass(classId)) {
+                if (enrolledStudents.add(studentAccount)) {
+                    enrollAccountIfAbsent(studentAccount, courseId);
+                }
+            }
+        }
+        return userMapper.getCourseByCourseId(courseId);
+    }
+
+    @Override
+    public List<SchoolClass> listSchoolClasses() {
+        return userMapper.listSchoolClasses();
+    }
+
+    @Override
+    public SchoolClass createSchoolClass(SchoolClassRequest request) {
+        if (request == null || request.getName() == null || request.getName().isBlank()) {
+            return null;
+        }
+        SchoolClass schoolClass = new SchoolClass();
+        schoolClass.setName(request.getName());
+        schoolClass.setMechanism(request.getMechanism());
+        schoolClass.setTeacher_account(request.getTeacher_account());
+        if (!userMapper.insertSchoolClass(schoolClass)) {
+            return null;
+        }
+        return schoolClass;
+    }
+
+    @Override
+    public boolean joinStudentClass(JoinStudentClassRequest request) {
+        if (request == null || request.getAccount() == null || request.getSchool_class_id() == null) {
+            return false;
+        }
+        Integer existing = userMapper.countStudentInClass(request.getAccount(), request.getSchool_class_id());
+        if (existing != null && existing > 0) {
+            return true;
+        }
+        if (!userMapper.insertStudentClass(request.getAccount(), request.getSchool_class_id())) {
+            return false;
+        }
+        enrollStudentInExistingCourses(request.getAccount(), request.getSchool_class_id());
+        return true;
+    }
+
+    @Override
+    public List<SchoolClass> getStudentSchoolClasses(String account) {
+        if (account == null || account.isBlank()) {
+            return List.of();
+        }
+        return userMapper.getSchoolClassesByStudentAccount(account);
+    }
+
+    private List<Integer> resolveSchoolClassIds(Integer singleId, List<Integer> multipleIds) {
+        Set<Integer> ids = new LinkedHashSet<>();
+        if (multipleIds != null) {
+            for (Integer id : multipleIds) {
+                if (id != null) {
+                    ids.add(id);
+                }
+            }
+        }
+        if (singleId != null) {
+            ids.add(singleId);
+        }
+        return new ArrayList<>(ids);
+    }
+
+    private void enrollStudentInExistingCourses(String account, Integer schoolClassId) {
+        Set<Long> courseIds = new LinkedHashSet<>();
+        List<Long> legacyIds = userMapper.getCourseIdsBySchoolClassLegacy(schoolClassId);
+        if (legacyIds != null) {
+            courseIds.addAll(legacyIds);
+        }
+        List<Long> linkedIds = userMapper.getCourseIdsBySchoolClassLink(schoolClassId);
+        if (linkedIds != null) {
+            courseIds.addAll(linkedIds);
+        }
+        for (Long courseId : courseIds) {
+            enrollAccountIfAbsent(account, courseId);
+        }
+    }
+
+    private void enrollAccountIfAbsent(String account, Long courseId) {
+        Integer count = userMapper.countAccountInCourse(account, courseId);
+        if (count == null || count == 0) {
+            userMapper.createCourse(account, courseId);
+        }
+    }
+
+    private String generateUniqueCourseCode() {
+        for (int i = 0; i < 10; i++) {
+            String code = generateCourseCode();
+            if (userMapper.getCourseByCode(code) == null) {
+                return code;
+            }
+        }
+        return generateCourseCode() + (System.currentTimeMillis() % 1000);
+    }
+
+    private String generateCourseCode() {
+        String chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        StringBuilder sb = new StringBuilder();
+        java.util.Random random = new java.util.Random();
+        for (int i = 0; i < 6; i++) {
+            sb.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        return sb.toString();
     }
 
     @Override

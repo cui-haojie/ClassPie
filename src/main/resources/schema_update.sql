@@ -13,3 +13,24 @@ CREATE TABLE IF NOT EXISTS notification (
     is_read TINYINT NOT NULL DEFAULT 0,
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS school_class (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(128) NOT NULL,
+    mechanism VARCHAR(128) NULL,
+    teacher_account VARCHAR(64) NULL
+);
+
+CREATE TABLE IF NOT EXISTS student_class (
+    account VARCHAR(64) NOT NULL,
+    school_class_id INT NOT NULL,
+    PRIMARY KEY (account, school_class_id)
+);
+
+ALTER TABLE courses ADD COLUMN school_class_id INT NULL;
+
+CREATE TABLE IF NOT EXISTS course_school_class (
+    course_id BIGINT NOT NULL,
+    school_class_id INT NOT NULL,
+    PRIMARY KEY (course_id, school_class_id)
+);

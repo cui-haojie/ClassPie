@@ -23,9 +23,12 @@ public interface UserMapper {
     @Update("update accounts set password = #{newPassword} where account = #{account}")
     boolean changePassword(@Param("newPassword") String newPassword,@Param("account") String account);
 
-    @Insert("insert into courses (teacher_account, class_time, class_name, selected_classes) VALUES " +
-            "(#{course.teacher_account}, #{course.class_time}, #{course.class_name}, #{course.selected_classes})")
+    @Insert("insert into courses (teacher_account, class_time, class_name, selected_classes, code, school_class_id) VALUES " +
+            "(#{course.teacher_account}, #{course.class_time}, #{course.class_name}, #{course.selected_classes}, #{course.code}, #{course.school_class_id})")
     boolean addCourse(@Param("course") CourseRequest course);
+
+    @Select("SELECT LAST_INSERT_ID()")
+    Long getLastInsertCourseId();
 
     @Delete("delete from account_course where class_id = #{id} and account = #{account}")
     boolean leaveCourse(@Param("id") Long id, @Param("account") String account);
@@ -123,4 +126,41 @@ public interface UserMapper {
 
     @Insert("insert into content (content_id,account,score,details) values (#{content.content_id}, #{content.account}, #{content.score}, #{content.details});")
     boolean addContent(@Param("content") Content content);
+
+    @Insert("insert into school_class (name, mechanism, teacher_account) values (#{name}, #{mechanism}, #{teacher_account})")
+    @Options(useGeneratedKeys = true, keyProperty = "id")
+    boolean insertSchoolClass(SchoolClass schoolClass);
+
+    @Select("select * from school_class order by id desc")
+    List<SchoolClass> listSchoolClasses();
+
+    @Select("select * from school_class where id = #{id}")
+    SchoolClass getSchoolClassById(@Param("id") Integer id);
+
+    @Select("select count(*) from student_class where account = #{account} and school_class_id = #{school_class_id}")
+    Integer countStudentInClass(@Param("account") String account, @Param("school_class_id") Integer school_class_id);
+
+    @Insert("insert into student_class (account, school_class_id) values (#{account}, #{school_class_id})")
+    boolean insertStudentClass(@Param("account") String account, @Param("school_class_id") Integer school_class_id);
+
+    @Select("select account from student_class where school_class_id = #{school_class_id}")
+    List<String> getStudentAccountsBySchoolClass(@Param("school_class_id") Integer school_class_id);
+
+    @Select("select id from courses where school_class_id = #{school_class_id}")
+    List<Long> getCourseIdsBySchoolClassLegacy(@Param("school_class_id") Integer school_class_id);
+
+    @Select("select course_id from course_school_class where school_class_id = #{school_class_id}")
+    List<Long> getCourseIdsBySchoolClassLink(@Param("school_class_id") Integer school_class_id);
+
+    @Insert("insert into course_school_class (course_id, school_class_id) values (#{course_id}, #{school_class_id})")
+    boolean insertCourseSchoolClass(@Param("course_id") Long course_id, @Param("school_class_id") Integer school_class_id);
+
+    @Select("select count(*) from account_course where account = #{account} and class_id = #{class_id}")
+    Integer countAccountInCourse(@Param("account") String account, @Param("class_id") Long class_id);
+
+    @Select("select sc.* from student_class st join school_class sc on st.school_class_id = sc.id where st.account = #{account} limit 1")
+    SchoolClass getSchoolClassByStudentAccount(@Param("account") String account);
+
+    @Select("select sc.* from student_class st join school_class sc on st.school_class_id = sc.id where st.account = #{account} order by sc.id")
+    List<SchoolClass> getSchoolClassesByStudentAccount(@Param("account") String account);
 }

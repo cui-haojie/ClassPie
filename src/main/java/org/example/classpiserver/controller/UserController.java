@@ -8,6 +8,7 @@ import org.example.classpiserver.entity.Homework;
 import org.example.classpiserver.entity.Content;
 import org.example.classpiserver.entity.CourseMember;
 import org.example.classpiserver.entity.Notification;
+import org.example.classpiserver.entity.SchoolClass;
 import org.example.classpiserver.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -43,8 +44,8 @@ public class UserController {
     }
 
     @PostMapping("/add")
-    public boolean addAccount(@RequestBody Accounts account) {
-        return userService.addAccount(account);
+    public boolean addAccount(@RequestBody RegisterRequest request) {
+        return userService.register(request);
     }
 
     @PutMapping("/change")
@@ -78,7 +79,7 @@ public class UserController {
     }
 
     @PostMapping("/createCourse")
-    public boolean createCourse(@RequestBody CourseRequest request) {
+    public Course createCourse(@RequestBody CourseRequest request) {
         return userService.addCourse(request);
     }
 
@@ -180,5 +181,25 @@ public class UserController {
     @PostMapping("/remindHomework")
     public boolean remindHomework(@RequestBody RemindHomeworkRequest request) {
         return userService.remindHomework(request);
+    }
+
+    @PostMapping("/listSchoolClasses")
+    public List<SchoolClass> listSchoolClasses() {
+        return userService.listSchoolClasses();
+    }
+
+    @PostMapping("/createSchoolClass")
+    public SchoolClass createSchoolClass(@RequestBody SchoolClassRequest request) {
+        return userService.createSchoolClass(request);
+    }
+
+    @PostMapping("/joinStudentClass")
+    public boolean joinStudentClass(@RequestBody JoinStudentClassRequest request) {
+        return userService.joinStudentClass(request);
+    }
+
+    @PostMapping("/studentSchoolClass")
+    public List<SchoolClass> getStudentSchoolClass(@RequestBody AccountRequest request) {
+        return userService.getStudentSchoolClasses(request.getAccount());
     }
 }

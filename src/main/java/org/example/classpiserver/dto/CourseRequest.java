@@ -7,6 +7,7 @@ public class CourseRequest {
     private String class_name;
     private String class_time;
     private String selected_classes;
+    private String semester;
     private Integer school_class_id;
     private List<Integer> school_class_ids;
     private String code;
@@ -33,6 +34,14 @@ public class CourseRequest {
 
     public void setSelected_classes(String selected_classes) {
         this.selected_classes = selected_classes;
+    }
+
+    public String getSemester() {
+        return semester;
+    }
+
+    public void setSemester(String semester) {
+        this.semester = semester;
     }
 
     public String getTeacher_account() {

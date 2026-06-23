@@ -6,6 +6,7 @@ public class CourseUpdateRequest {
     private String class_name;
     private String class_time;
     private String selected_classes;
+    private String semester;
 
     public Long getId() {
         return id;
@@ -45,5 +46,13 @@ public class CourseUpdateRequest {
 
     public void setSelected_classes(String selected_classes) {
         this.selected_classes = selected_classes;
+    }
+
+    public String getSemester() {
+        return semester;
+    }
+
+    public void setSemester(String semester) {
+        this.semester = semester;
     }
 }

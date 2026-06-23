@@ -3,11 +3,13 @@ package org.example.classpiserver.service;
 import org.example.classpiserver.dto.*;
 import org.example.classpiserver.entity.*;
 import org.example.classpiserver.mapper.UserMapper;
-import org.example.classpiserver.service.UserService;
+import org.example.classpiserver.util.StudentExcelUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -46,6 +48,11 @@ public class UserServiceImpl implements UserService {
         account.setName(req.getName());
         account.setStatus(req.getStatus());
         account.setMechanism(req.getMechanism());
+        if ("学生".equals(req.getStatus()) && req.getStatus_number() != null && !req.getStatus_number().isBlank()) {
+            if (!isValidStudentId(req.getStatus_number())) {
+                return false;
+            }
+        }
         account.setStatus_number(req.getStatus_number());
         if (!addAccount(account)) {
             return false;
@@ -117,6 +124,23 @@ public class UserServiceImpl implements UserService {
         return password != null && password.length() >= 8;
     }
 
+    private boolean isValidStudentId(String statusNumber) {
+        return statusNumber != null && statusNumber.matches("\\d{6,20}");
+    }
+
+    private String resolveDefaultSemester() {
+        java.time.LocalDate today = java.time.LocalDate.now();
+        int year = today.getYear();
+        int month = today.getMonthValue();
+        if (month >= 9) {
+            return year + "-" + (year + 1) + " 第一学期";
+        }
+        if (month >= 3) {
+            return (year - 1) + "-" + year + " 第二学期";
+        }
+        return (year - 1) + "-" + year + " 第一学期";
+    }
+
     private String encryptPassword(String password) {
         return password;
     }
@@ -154,6 +178,9 @@ public class UserServiceImpl implements UserService {
             course.setSchool_class_id(schoolClassIds.get(0));
         } else {
             course.setSchool_class_id(null);
+        }
+        if (course.getSemester() == null || course.getSemester().isBlank()) {
+            course.setSemester(resolveDefaultSemester());
         }
         course.setCode(generateUniqueCourseCode());
         if (!userMapper.addCourse(course)) {
@@ -213,11 +240,136 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public boolean updateStudentSchoolClasses(UpdateStudentSchoolClassRequest request) {
+        if (request == null || request.getAccount() == null || request.getAccount().isBlank()) {
+            return false;
+        }
+        List<Integer> classIds = resolveSchoolClassIds(null, request.getSchool_class_ids());
+        if (classIds.isEmpty()) {
+            return false;
+        }
+        for (Integer classId : classIds) {
+            if (userMapper.getSchoolClassById(classId) == null) {
+                return false;
+            }
+        }
+        userMapper.deleteStudentClassesByAccount(request.getAccount());
+        for (Integer classId : classIds) {
+            userMapper.insertStudentClass(request.getAccount(), classId);
+            enrollStudentInExistingCourses(request.getAccount(), classId);
+        }
+        return true;
+    }
+
+    @Override
     public List<SchoolClass> getStudentSchoolClasses(String account) {
         if (account == null || account.isBlank()) {
             return List.of();
         }
         return userMapper.getSchoolClassesByStudentAccount(account);
+    }
+
+    @Override
+    public ImportStudentResult importSchoolClassStudents(MultipartFile file, Integer schoolClassId) {
+        ImportStudentResult result = new ImportStudentResult();
+        if (schoolClassId == null) {
+            result.setFailed(1);
+            result.addMessage("缺少班级 ID");
+            return result;
+        }
+        SchoolClass schoolClass = userMapper.getSchoolClassById(schoolClassId);
+        if (schoolClass == null) {
+            result.setFailed(1);
+            result.addMessage("班级不存在");
+            return result;
+        }
+
+        List<StudentExcelUtil.StudentRow> rows;
+        try {
+            rows = StudentExcelUtil.parseImportFile(file);
+        } catch (IOException e) {
+            result.setFailed(1);
+            result.addMessage("读取 Excel 失败：" + e.getMessage());
+            return result;
+        } catch (IllegalArgumentException e) {
+            result.setFailed(1);
+            result.addMessage(e.getMessage());
+            return result;
+        }
+
+        String mechanism = schoolClass.getMechanism() == null ? "" : schoolClass.getMechanism();
+        for (StudentExcelUtil.StudentRow row : rows) {
+            try {
+                importOneStudentRow(row, schoolClassId, mechanism, result);
+            } catch (Exception e) {
+                result.setFailed(result.getFailed() + 1);
+                result.addMessage("第" + row.getRowNum() + "行：" + e.getMessage());
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public byte[] buildStudentImportTemplate() {
+        try {
+            return StudentExcelUtil.buildTemplateBytes();
+        } catch (IOException e) {
+            throw new IllegalStateException("生成模板失败", e);
+        }
+    }
+
+    private void importOneStudentRow(StudentExcelUtil.StudentRow row, Integer schoolClassId, String mechanism, ImportStudentResult result) {
+        String accountName = row.getAccount().trim();
+        if (accountName.length() < 4 || accountName.length() > 32) {
+            result.setFailed(result.getFailed() + 1);
+            result.addMessage("第" + row.getRowNum() + "行：账号长度须为 4~32 位");
+            return;
+        }
+        String password = row.resolvedPassword();
+        if (password.length() < 8 || password.length() > 16) {
+            result.setFailed(result.getFailed() + 1);
+            result.addMessage("第" + row.getRowNum() + "行：密码长度须为 8~16 位");
+            return;
+        }
+        String statusNumber = row.getStatusNumber() == null ? "" : row.getStatusNumber().trim();
+        if (!statusNumber.isEmpty() && !isValidStudentId(statusNumber)) {
+            result.setFailed(result.getFailed() + 1);
+            result.addMessage("第" + row.getRowNum() + "行：学号须为 6~20 位数字");
+            return;
+        }
+
+        Accounts existing = userMapper.getAccount(accountName);
+        if (existing != null) {
+            if (!"学生".equals(existing.getStatus())) {
+                result.setFailed(result.getFailed() + 1);
+                result.addMessage("第" + row.getRowNum() + "行：账号已存在且非学生身份");
+                return;
+            }
+            Integer count = userMapper.countStudentInClass(accountName, schoolClassId);
+            if (count != null && count > 0) {
+                result.setSkipped(result.getSkipped() + 1);
+                return;
+            }
+            userMapper.insertStudentClass(accountName, schoolClassId);
+            enrollStudentInExistingCourses(accountName, schoolClassId);
+            result.setLinked(result.getLinked() + 1);
+            return;
+        }
+
+        RegisterRequest registerRequest = new RegisterRequest();
+        registerRequest.setAccount(accountName);
+        registerRequest.setPassword(password);
+        registerRequest.setName(row.getName() == null || row.getName().isBlank() ? accountName : row.getName().trim());
+        registerRequest.setStatus("学生");
+        registerRequest.setMechanism(mechanism);
+        registerRequest.setStatus_number(statusNumber);
+        registerRequest.setSchool_class_id(schoolClassId);
+        if (!register(registerRequest)) {
+            result.setFailed(result.getFailed() + 1);
+            result.addMessage("第" + row.getRowNum() + "行：创建学生失败");
+            return;
+        }
+        result.setCreated(result.getCreated() + 1);
     }
 
     private List<Integer> resolveSchoolClassIds(Integer singleId, List<Integer> multipleIds) {
@@ -406,7 +558,14 @@ public class UserServiceImpl implements UserService {
             existing.setEmail_or_phone(account.getEmail_or_phone());
         }
         if (account.getStatus_number() != null) {
-            existing.setStatus_number(account.getStatus_number());
+            String statusNumber = account.getStatus_number().trim();
+            if (!statusNumber.isEmpty()) {
+                String role = account.getStatus() != null ? account.getStatus() : existing.getStatus();
+                if ("学生".equals(role) && !isValidStudentId(statusNumber)) {
+                    return false;
+                }
+            }
+            existing.setStatus_number(statusNumber);
         }
         if (account.getStatus() != null) {
             existing.setStatus(account.getStatus());

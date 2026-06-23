@@ -11,9 +11,12 @@ import org.example.classpiserver.entity.Notification;
 import org.example.classpiserver.entity.SchoolClass;
 import org.example.classpiserver.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 @RestController
@@ -198,8 +201,29 @@ public class UserController {
         return userService.joinStudentClass(request);
     }
 
+    @PutMapping("/updateStudentSchoolClasses")
+    public boolean updateStudentSchoolClasses(@RequestBody UpdateStudentSchoolClassRequest request) {
+        return userService.updateStudentSchoolClasses(request);
+    }
+
     @PostMapping("/studentSchoolClass")
     public List<SchoolClass> getStudentSchoolClass(@RequestBody AccountRequest request) {
         return userService.getStudentSchoolClasses(request.getAccount());
+    }
+
+    @PostMapping(value = "/importSchoolClassStudents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ImportStudentResult importSchoolClassStudents(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("school_class_id") Integer schoolClassId) {
+        return userService.importSchoolClassStudents(file, schoolClassId);
+    }
+
+    @GetMapping("/downloadStudentImportTemplate")
+    public ResponseEntity<byte[]> downloadStudentImportTemplate() {
+        byte[] bytes = userService.buildStudentImportTemplate();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=student_import_template.xlsx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(bytes);
     }
 }

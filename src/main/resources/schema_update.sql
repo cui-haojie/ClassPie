@@ -29,6 +29,10 @@ CREATE TABLE IF NOT EXISTS student_class (
 
 ALTER TABLE courses ADD COLUMN school_class_id INT NULL;
 
+ALTER TABLE courses ADD COLUMN semester VARCHAR(64) NULL COMMENT '学年学期';
+
+UPDATE courses SET semester = '2024-2025 第一学期' WHERE semester IS NULL OR semester = '';
+
 CREATE TABLE IF NOT EXISTS course_school_class (
     course_id BIGINT NOT NULL,
     school_class_id INT NOT NULL,

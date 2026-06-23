@@ -23,8 +23,8 @@ public interface UserMapper {
     @Update("update accounts set password = #{newPassword} where account = #{account}")
     boolean changePassword(@Param("newPassword") String newPassword,@Param("account") String account);
 
-    @Insert("insert into courses (teacher_account, class_time, class_name, selected_classes, code, school_class_id) VALUES " +
-            "(#{course.teacher_account}, #{course.class_time}, #{course.class_name}, #{course.selected_classes}, #{course.code}, #{course.school_class_id})")
+    @Insert("insert into courses (teacher_account, class_time, class_name, selected_classes, code, school_class_id, semester) VALUES " +
+            "(#{course.teacher_account}, #{course.class_time}, #{course.class_name}, #{course.selected_classes}, #{course.code}, #{course.school_class_id}, #{course.semester})")
     boolean addCourse(@Param("course") CourseRequest course);
 
     @Select("SELECT LAST_INSERT_ID()")
@@ -85,7 +85,7 @@ public interface UserMapper {
     @Select("select homework_id from courses_homework where class_id = #{class_id}")
     List<Integer> getCourseIdByClassId(@Param("class_id") Integer class_id);
 
-    @Update("update courses set class_name = #{class_name}, class_time = #{class_time}, selected_classes = #{selected_classes} where id = #{id} and teacher_account = #{teacher_account}")
+    @Update("update courses set class_name = #{class_name}, class_time = #{class_time}, selected_classes = #{selected_classes}, semester = #{semester} where id = #{id} and teacher_account = #{teacher_account}")
     boolean updateCourseInfo(CourseUpdateRequest course);
 
     @Update("update accounts set name = #{name}, mechanism = #{mechanism}, email_or_phone = #{email_or_phone}, status_number = #{status_number}, status = #{status} where account = #{account}")
@@ -142,6 +142,9 @@ public interface UserMapper {
 
     @Insert("insert into student_class (account, school_class_id) values (#{account}, #{school_class_id})")
     boolean insertStudentClass(@Param("account") String account, @Param("school_class_id") Integer school_class_id);
+
+    @Delete("delete from student_class where account = #{account}")
+    boolean deleteStudentClassesByAccount(@Param("account") String account);
 
     @Select("select account from student_class where school_class_id = #{school_class_id}")
     List<String> getStudentAccountsBySchoolClass(@Param("school_class_id") Integer school_class_id);

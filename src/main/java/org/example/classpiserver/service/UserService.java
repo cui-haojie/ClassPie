@@ -3,6 +3,8 @@ package org.example.classpiserver.service;
 import org.example.classpiserver.dto.*;
 import org.example.classpiserver.entity.*;
 
+import org.springframework.web.multipart.MultipartFile;
+
 import java.util.List;
 
 public interface UserService {
@@ -23,7 +25,10 @@ public interface UserService {
     List<SchoolClass> listSchoolClasses();
     SchoolClass createSchoolClass(SchoolClassRequest request);
     boolean joinStudentClass(JoinStudentClassRequest request);
+    boolean updateStudentSchoolClasses(UpdateStudentSchoolClassRequest request);
     List<SchoolClass> getStudentSchoolClasses(String account);
+    ImportStudentResult importSchoolClassStudents(MultipartFile file, Integer schoolClassId);
+    byte[] buildStudentImportTemplate();
     boolean addTeacherCourse(String account);
     Course getCourseById(Long id);
     Integer getCountByCourseId(Long id);

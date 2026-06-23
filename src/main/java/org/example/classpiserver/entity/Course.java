@@ -16,6 +16,7 @@ private String selected_classes;
 private String code;
 private Boolean is_pinned;
 private Integer school_class_id;
+private String semester;
 
     public String getClass_name() {
         return class_name;
@@ -71,6 +72,14 @@ private Integer school_class_id;
 
     public void setIs_pinned(Boolean is_pinned) {
         this.is_pinned = is_pinned;
+    }
+
+    public String getSemester() {
+        return semester;
+    }
+
+    public void setSemester(String semester) {
+        this.semester = semester;
     }
 
     public Integer getSchool_class_id() {

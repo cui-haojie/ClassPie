@@ -26,6 +26,7 @@ public interface UserService {
     SchoolClass createSchoolClass(SchoolClassRequest request);
     boolean joinStudentClass(JoinStudentClassRequest request);
     boolean updateStudentSchoolClasses(UpdateStudentSchoolClassRequest request);
+    boolean updateCourseOrder(CourseOrderRequest request);
     List<SchoolClass> getStudentSchoolClasses(String account);
     ImportStudentResult importSchoolClassStudents(MultipartFile file, Integer schoolClassId);
     byte[] buildStudentImportTemplate();
@@ -44,9 +45,14 @@ public interface UserService {
     List<Content> getContentById(Long id);
     boolean setContentScore(int newScore,Long content_id,String account);
     boolean addContent(Content content);
+    boolean submitHomework(Long contentId, String account, String details, MultipartFile file);
+    String uploadAvatar(String account, MultipartFile file);
     boolean updateAccount(Accounts account);
     List<Notification> getNotifications(String account);
     Integer getUnreadNotificationCount(String account);
     boolean markNotificationRead(Integer id, String account);
     boolean remindHomework(RemindHomeworkRequest request);
+    List<CourseActivity> getCourseActivities(Integer classId, String type);
+    Integer countCourseActivities(Integer classId, String type);
+    boolean addCourseActivity(CourseActivity activity, Integer classId);
 }

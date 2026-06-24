@@ -8,6 +8,7 @@ public class CourseMember {
     private String name;
     private String status;
     private String status_number;
+    private String avatar_url;
 
     public String getAccount() {
         return account;
@@ -39,5 +40,13 @@ public class CourseMember {
 
     public void setStatus_number(String status_number) {
         this.status_number = status_number;
+    }
+
+    public String getAvatar_url() {
+        return avatar_url;
+    }
+
+    public void setAvatar_url(String avatar_url) {
+        this.avatar_url = avatar_url;
     }
 }

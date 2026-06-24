@@ -8,6 +8,9 @@ public class Content {
     private String details;
     private int score;
     private String account;
+    private String attachment_url;
+    private String attachment_name;
+    private Boolean is_graded;
 
     public String getAccount() {
         return account;
@@ -39,5 +42,29 @@ public class Content {
 
     public void setScore(int score) {
         this.score = score;
+    }
+
+    public String getAttachment_url() {
+        return attachment_url;
+    }
+
+    public void setAttachment_url(String attachment_url) {
+        this.attachment_url = attachment_url;
+    }
+
+    public String getAttachment_name() {
+        return attachment_name;
+    }
+
+    public void setAttachment_name(String attachment_name) {
+        this.attachment_name = attachment_name;
+    }
+
+    public Boolean getIs_graded() {
+        return is_graded;
+    }
+
+    public void setIs_graded(Boolean is_graded) {
+        this.is_graded = is_graded;
     }
 }

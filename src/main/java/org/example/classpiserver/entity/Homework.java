@@ -12,6 +12,10 @@ public class Homework {
     private int score;
     private String details;
 
+    private int graded_count;
+    private int ungraded_count;
+    private int unsubmitted_count;
+
     public int getContent_id() {
         return content_id;
     }
@@ -90,5 +94,29 @@ public class Homework {
 
     public void setType(String type) {
         this.type = type;
+    }
+
+    public int getGraded_count() {
+        return graded_count;
+    }
+
+    public void setGraded_count(int graded_count) {
+        this.graded_count = graded_count;
+    }
+
+    public int getUngraded_count() {
+        return ungraded_count;
+    }
+
+    public void setUngraded_count(int ungraded_count) {
+        this.ungraded_count = ungraded_count;
+    }
+
+    public int getUnsubmitted_count() {
+        return unsubmitted_count;
+    }
+
+    public void setUnsubmitted_count(int unsubmitted_count) {
+        this.unsubmitted_count = unsubmitted_count;
     }
 }

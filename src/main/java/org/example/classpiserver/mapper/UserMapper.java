@@ -33,7 +33,7 @@ public interface UserMapper {
     @Delete("delete from account_course where class_id = #{id} and account = #{account}")
     boolean leaveCourse(@Param("id") Long id, @Param("account") String account);
 
-    @Select("select class_id from account_course where account = #{account} and is_archived = 0")
+    @Select("select class_id from account_course where account = #{account} and is_archived = 0 order by sort_order asc, class_id asc")
     List<Long> getCourseIdByAccount(@Param("account") String account);
 
     @Select("select class_id from account_course where account = #{account} and is_archived = 1")
@@ -47,6 +47,15 @@ public interface UserMapper {
 
     @Select("select * from courses where code = #{code}")
     Course getCourseByCode(@Param("code") String code);
+
+    @Insert("insert into account_course (account,class_id,sort_order) values (#{account}, #{class_id}, #{sort_order})")
+    void createCourseWithOrder(@Param("account") String account, @Param("class_id") Long class_id, @Param("sort_order") int sort_order);
+
+    @Select("select COALESCE(MAX(sort_order), -1) from account_course where account = #{account}")
+    Integer getMaxSortOrder(@Param("account") String account);
+
+    @Update("update account_course set sort_order = #{sort_order} where account = #{account} and class_id = #{class_id}")
+    boolean updateCourseSortOrder(@Param("account") String account, @Param("class_id") Long class_id, @Param("sort_order") int sort_order);
 
     @Insert("insert into account_course (account,class_id) values (#{account}, #{class_id})")
     void createCourse(@Param("account") String account, @Param("class_id") Long class_id);
@@ -82,6 +91,9 @@ public interface UserMapper {
     @Select("select * from homework where homework_id = #{homework_id}")
     Homework getHomework(@Param("homework_id") Integer homework_id);
 
+    @Select("select * from homework where homework_id = #{id} or content_id = #{id} limit 1")
+    Homework getHomeworkByContentOrId(@Param("id") Long id);
+
     @Select("select homework_id from courses_homework where class_id = #{class_id}")
     List<Integer> getCourseIdByClassId(@Param("class_id") Integer class_id);
 
@@ -94,7 +106,7 @@ public interface UserMapper {
     @Update("update account_course set is_archived = #{archived} where account = #{account} and class_id = #{class_id}")
     boolean setCourseArchived(@Param("account") String account, @Param("class_id") Long class_id, @Param("archived") int archived);
 
-    @Select("SELECT a.account, a.name, a.status, a.status_number FROM accounts a INNER JOIN account_course ac ON a.account = ac.account WHERE ac.class_id = #{classId} AND ac.is_archived = 0")
+    @Select("SELECT a.account, a.name, a.status, a.status_number, a.avatar_url FROM accounts a INNER JOIN account_course ac ON a.account = ac.account WHERE ac.class_id = #{classId} AND ac.is_archived = 0")
     List<CourseMember> getCourseMembers(@Param("classId") Long classId);
 
     @Select("SELECT ac.account FROM account_course ac LEFT JOIN content c ON c.account = ac.account AND c.content_id = #{contentId} WHERE ac.class_id = #{classId} AND ac.is_archived = 0 AND c.account IS NULL")
@@ -121,11 +133,29 @@ public interface UserMapper {
     @Select("select * from content where content_id = #{content_id}")
     List<Content> getContentByContentId(@Param("content_id") Long content_id);
 
-    @Update("UPDATE content set score = #{newScore} where content_id = #{content_id} and account = #{account}")
+    @Update("UPDATE content set score = #{newScore}, is_graded = 1 where content_id = #{content_id} and account = #{account}")
     boolean setContentScore(@Param("newScore") int newScore,@Param("content_id") Long content_id,@Param("account") String account);
 
-    @Insert("insert into content (content_id,account,score,details) values (#{content.content_id}, #{content.account}, #{content.score}, #{content.details});")
+    @Insert("insert into content (content_id,account,score,details,attachment_url,attachment_name,is_graded) values (#{content.content_id}, #{content.account}, #{content.score}, #{content.details}, #{content.attachment_url}, #{content.attachment_name}, #{content.is_graded});")
     boolean addContent(@Param("content") Content content);
+
+    @Select("SELECT COUNT(*) FROM account_course ac INNER JOIN accounts a ON ac.account = a.account WHERE ac.class_id = #{classId} AND ac.is_archived = 0 AND a.status = '学生'")
+    Integer countStudentMembersByClass(@Param("classId") Long classId);
+
+    @Select("SELECT COUNT(*) FROM content c INNER JOIN accounts a ON c.account = a.account WHERE c.content_id = #{contentId} AND a.status = '学生' AND c.is_graded = 1")
+    Integer countGradedSubmissions(@Param("contentId") Long contentId);
+
+    @Select("SELECT COUNT(*) FROM content c INNER JOIN accounts a ON c.account = a.account WHERE c.content_id = #{contentId} AND a.status = '学生' AND c.is_graded = 0")
+    Integer countUngradedSubmissions(@Param("contentId") Long contentId);
+
+    @Select("SELECT COUNT(*) FROM account_course ac INNER JOIN accounts a ON ac.account = a.account LEFT JOIN content c ON c.account = ac.account AND c.content_id = #{contentId} WHERE ac.class_id = #{classId} AND ac.is_archived = 0 AND a.status = '学生' AND c.account IS NULL")
+    Integer countUnsubmittedStudents(@Param("classId") Long classId, @Param("contentId") Long contentId);
+
+    @Select("select count(*) from content where content_id = #{content_id} and account = #{account}")
+    Integer countContentSubmission(@Param("content_id") Long content_id, @Param("account") String account);
+
+    @Update("update accounts set avatar_url = #{avatar_url} where account = #{account}")
+    boolean updateAvatarUrl(@Param("account") String account, @Param("avatar_url") String avatar_url);
 
     @Insert("insert into school_class (name, mechanism, teacher_account) values (#{name}, #{mechanism}, #{teacher_account})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
@@ -166,4 +196,16 @@ public interface UserMapper {
 
     @Select("select sc.* from student_class st join school_class sc on st.school_class_id = sc.id where st.account = #{account} order by sc.id")
     List<SchoolClass> getSchoolClassesByStudentAccount(@Param("account") String account);
+
+    @Insert("insert into course_activity (class_id, type, title, content, attachment_url, attachment_name, deadline, creator_account) " +
+            "values (#{activity.class_id}, #{activity.type}, #{activity.title}, #{activity.content}, #{activity.attachment_url}, #{activity.attachment_name}, #{activity.deadline}, #{activity.creator_account})")
+    boolean addCourseActivity(@Param("activity") CourseActivity activity);
+
+    @Select("select ca.*, a.name as creator_name from course_activity ca " +
+            "left join accounts a on ca.creator_account = a.account " +
+            "where ca.class_id = #{class_id} and ca.type = #{type} order by ca.create_time desc")
+    List<CourseActivity> getCourseActivitiesByType(@Param("class_id") Integer class_id, @Param("type") String type);
+
+    @Select("select count(*) from course_activity where class_id = #{class_id} and type = #{type}")
+    Integer countCourseActivitiesByType(@Param("class_id") Integer class_id, @Param("type") String type);
 }

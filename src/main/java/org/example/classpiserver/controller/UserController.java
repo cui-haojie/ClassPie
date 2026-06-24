@@ -6,6 +6,7 @@ import org.example.classpiserver.entity.Course;
 import org.example.classpiserver.entity.Courses_homework;
 import org.example.classpiserver.entity.Homework;
 import org.example.classpiserver.entity.Content;
+import org.example.classpiserver.entity.CourseActivity;
 import org.example.classpiserver.entity.CourseMember;
 import org.example.classpiserver.entity.Notification;
 import org.example.classpiserver.entity.SchoolClass;
@@ -161,6 +162,26 @@ public class UserController {
         return userService.addContent(content);
     }
 
+    @PostMapping(value = "/submitHomework", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public boolean submitHomework(
+            @RequestParam("content_id") Long contentId,
+            @RequestParam("account") String account,
+            @RequestParam(value = "details", required = false) String details,
+            @RequestParam(value = "file", required = false) MultipartFile file) {
+        return userService.submitHomework(contentId, account, details, file);
+    }
+
+    @PostMapping(value = "/uploadAvatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<java.util.Map<String, String>> uploadAvatar(
+            @RequestParam("account") String account,
+            @RequestParam("file") MultipartFile file) {
+        String avatarUrl = userService.uploadAvatar(account, file);
+        if (avatarUrl == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(java.util.Map.of("message", "头像上传失败"));
+        }
+        return ResponseEntity.ok(java.util.Map.of("avatar_url", avatarUrl));
+    }
+
     @PutMapping("/updateAccount")
     public boolean updateAccount(@RequestBody Accounts account) {
         return userService.updateAccount(account);
@@ -206,6 +227,11 @@ public class UserController {
         return userService.updateStudentSchoolClasses(request);
     }
 
+    @PutMapping("/updateCourseOrder")
+    public boolean updateCourseOrder(@RequestBody CourseOrderRequest request) {
+        return userService.updateCourseOrder(request);
+    }
+
     @PostMapping("/studentSchoolClass")
     public List<SchoolClass> getStudentSchoolClass(@RequestBody AccountRequest request) {
         return userService.getStudentSchoolClasses(request.getAccount());
@@ -216,6 +242,21 @@ public class UserController {
             @RequestParam("file") MultipartFile file,
             @RequestParam("school_class_id") Integer schoolClassId) {
         return userService.importSchoolClassStudents(file, schoolClassId);
+    }
+
+    @PostMapping("/getCourseActivities")
+    public List<CourseActivity> getCourseActivities(@RequestBody CourseActivitiesRequest request) {
+        return userService.getCourseActivities(request.getClass_id(), request.getType());
+    }
+
+    @PostMapping("/getCourseActivityCount")
+    public Integer getCourseActivityCount(@RequestBody CourseActivitiesRequest request) {
+        return userService.countCourseActivities(request.getClass_id(), request.getType());
+    }
+
+    @PostMapping("/addCourseActivity")
+    public boolean addCourseActivity(@RequestBody CourseActivityRequest request) {
+        return userService.addCourseActivity(request.getActivity(), request.getClass_id());
     }
 
     @GetMapping("/downloadStudentImportTemplate")

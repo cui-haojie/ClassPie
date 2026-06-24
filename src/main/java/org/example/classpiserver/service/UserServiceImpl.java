@@ -3,6 +3,8 @@ package org.example.classpiserver.service;
 import org.example.classpiserver.dto.*;
 import org.example.classpiserver.entity.*;
 import org.example.classpiserver.mapper.UserMapper;
+import org.example.classpiserver.util.FileStorageService;
+import org.example.classpiserver.util.HomeworkDeadlineUtil;
 import org.example.classpiserver.util.StudentExcelUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private UserMapper userMapper;
+
+    @Autowired
+    private FileStorageService fileStorageService;
 
     @Override
     public boolean addAccount(Accounts account) {
@@ -101,14 +106,15 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Course getCourseByCode(String account, String code) {
-        if (userMapper.getCourseByCode(code) != null){
-            userMapper.createCourse(account,userMapper.getCourseByCode(code).getId());
+        Course course = userMapper.getCourseByCode(code);
+        if (course != null) {
+            enrollAccountIfAbsent(account, course.getId());
         }
-        return userMapper.getCourseByCode(code);
+        return course;
     }
     @Override
     public void addCourse(String account,Long class_id) {
-        userMapper.createCourse(account,class_id);
+        enrollAccountIfAbsent(account, class_id);
     }
 
     @Override
@@ -405,8 +411,33 @@ public class UserServiceImpl implements UserService {
     private void enrollAccountIfAbsent(String account, Long courseId) {
         Integer count = userMapper.countAccountInCourse(account, courseId);
         if (count == null || count == 0) {
-            userMapper.createCourse(account, courseId);
+            Integer maxOrder = userMapper.getMaxSortOrder(account);
+            int nextOrder = (maxOrder == null ? -1 : maxOrder) + 1;
+            userMapper.createCourseWithOrder(account, courseId, nextOrder);
         }
+    }
+
+    @Override
+    public boolean updateCourseOrder(CourseOrderRequest request) {
+        if (request == null || request.getAccount() == null || request.getAccount().isBlank()) {
+            return false;
+        }
+        List<Long> courseIds = request.getCourse_ids();
+        if (courseIds == null || courseIds.isEmpty()) {
+            return false;
+        }
+        for (int i = 0; i < courseIds.size(); i++) {
+            Long courseId = courseIds.get(i);
+            if (courseId == null) {
+                continue;
+            }
+            Integer linked = userMapper.countAccountInCourse(request.getAccount(), courseId);
+            if (linked == null || linked == 0) {
+                continue;
+            }
+            userMapper.updateCourseSortOrder(request.getAccount(), courseId, i);
+        }
+        return true;
     }
 
     private String generateUniqueCourseCode() {
@@ -484,6 +515,9 @@ public class UserServiceImpl implements UserService {
     @Override
     public boolean addHomework(Homework homework, Integer class_id) {
         try {
+            if (homework.getDeadline() != null) {
+                homework.setDeadline(HomeworkDeadlineUtil.normalizeInput(homework.getDeadline()));
+            }
             userMapper.addHomework(homework);
             Integer homeworkId = userMapper.getLastInsertId();
             userMapper.setHomeworkContentId(homeworkId, homeworkId);
@@ -509,14 +543,38 @@ public class UserServiceImpl implements UserService {
     public List<Homework> getHomeworkByClassId(Integer class_id) {
         List<Homework> homeworkList = new ArrayList<>();
         for (Integer homework_id : userMapper.getCourseIdByClassId(class_id)){
-            homeworkList.add(userMapper.getHomework(homework_id));
+            Homework homework = userMapper.getHomework(homework_id);
+            normalizeHomeworkDeadline(homework);
+            fillHomeworkSubmissionStats(homework, class_id.longValue());
+            homeworkList.add(homework);
         }
         return homeworkList;
     }
 
+    private void fillHomeworkSubmissionStats(Homework homework, Long classId) {
+        if (homework == null) {
+            return;
+        }
+        long contentId = homework.getContent_id() > 0 ? homework.getContent_id() : homework.getHomework_id();
+        Integer graded = userMapper.countGradedSubmissions(contentId);
+        Integer ungraded = userMapper.countUngradedSubmissions(contentId);
+        Integer unsubmitted = userMapper.countUnsubmittedStudents(classId, contentId);
+        homework.setGraded_count(graded == null ? 0 : graded);
+        homework.setUngraded_count(ungraded == null ? 0 : ungraded);
+        homework.setUnsubmitted_count(unsubmitted == null ? 0 : unsubmitted);
+    }
+
     @Override
     public Homework getHomeworkById(Integer homework_id) {
-        return userMapper.getHomework(homework_id);
+        Homework homework = userMapper.getHomework(homework_id);
+        normalizeHomeworkDeadline(homework);
+        return homework;
+    }
+
+    private void normalizeHomeworkDeadline(Homework homework) {
+        if (homework != null && homework.getDeadline() != null) {
+            homework.setDeadline(HomeworkDeadlineUtil.formatDisplay(homework.getDeadline()));
+        }
     }
 
     @Override
@@ -537,6 +595,63 @@ public class UserServiceImpl implements UserService {
     @Override
     public boolean addContent(Content content) {
         return userMapper.addContent(content);
+    }
+
+    @Override
+    public boolean submitHomework(Long contentId, String account, String details, MultipartFile file) {
+        if (contentId == null || account == null || account.isBlank()) {
+            return false;
+        }
+        Integer existing = userMapper.countContentSubmission(contentId, account);
+        if (existing != null && existing > 0) {
+            return false;
+        }
+        Homework homework = userMapper.getHomeworkByContentOrId(contentId);
+        if (homework != null && HomeworkDeadlineUtil.isDeadlinePassed(homework.getDeadline())) {
+            return false;
+        }
+        String text = details == null ? "" : details.trim();
+        String attachmentUrl = null;
+        String attachmentName = null;
+        if (file != null && !file.isEmpty()) {
+            try {
+                FileStorageService.StoredFile stored = fileStorageService.saveHomeworkAttachment(file);
+                attachmentUrl = stored.url();
+                attachmentName = stored.originalName();
+            } catch (IOException | IllegalArgumentException ex) {
+                return false;
+            }
+        }
+        if (text.isEmpty() && attachmentUrl == null) {
+            return false;
+        }
+        Content content = new Content();
+        content.setContent_id(contentId);
+        content.setAccount(account);
+        content.setScore(0);
+        content.setDetails(text.isEmpty() ? "（附件提交）" : text);
+        content.setAttachment_url(attachmentUrl);
+        content.setAttachment_name(attachmentName);
+        content.setIs_graded(false);
+        return userMapper.addContent(content);
+    }
+
+    @Override
+    public String uploadAvatar(String account, MultipartFile file) {
+        if (account == null || account.isBlank() || file == null || file.isEmpty()) {
+            return null;
+        }
+        Accounts existing = userMapper.getAccount(account);
+        if (existing == null) {
+            return null;
+        }
+        try {
+            String avatarUrl = fileStorageService.saveAvatar(file, account);
+            userMapper.updateAvatarUrl(account, avatarUrl);
+            return avatarUrl;
+        } catch (IOException | IllegalArgumentException ex) {
+            return null;
+        }
     }
 
     @Override
@@ -626,6 +741,75 @@ public class UserServiceImpl implements UserService {
             notification.setHomework_id(homeworkId);
             notification.setType("homework");
             notification.setMessage("新作业发布：" + homeworkName);
+            userMapper.addNotification(notification);
+        }
+    }
+
+    private static final Set<String> COURSE_ACTIVITY_TYPES = Set.of(
+            "interaction", "topic", "material", "test", "announcement"
+    );
+
+    @Override
+    public List<CourseActivity> getCourseActivities(Integer classId, String type) {
+        if (classId == null || type == null || !COURSE_ACTIVITY_TYPES.contains(type)) {
+            return List.of();
+        }
+        List<CourseActivity> activities = userMapper.getCourseActivitiesByType(classId, type);
+        for (CourseActivity activity : activities) {
+            if (activity.getDeadline() != null) {
+                activity.setDeadline(HomeworkDeadlineUtil.formatDisplay(activity.getDeadline()));
+            }
+            if (activity.getCreate_time() != null) {
+                activity.setCreate_time(HomeworkDeadlineUtil.formatDisplay(activity.getCreate_time()));
+            }
+        }
+        return activities;
+    }
+
+    @Override
+    public Integer countCourseActivities(Integer classId, String type) {
+        if (classId == null || type == null || !COURSE_ACTIVITY_TYPES.contains(type)) {
+            return 0;
+        }
+        Integer count = userMapper.countCourseActivitiesByType(classId, type);
+        return count == null ? 0 : count;
+    }
+
+    @Override
+    public boolean addCourseActivity(CourseActivity activity, Integer classId) {
+        if (activity == null || classId == null || activity.getTitle() == null || activity.getTitle().isBlank()) {
+            return false;
+        }
+        if (activity.getType() == null || !COURSE_ACTIVITY_TYPES.contains(activity.getType())) {
+            return false;
+        }
+        if (activity.getCreator_account() == null || activity.getCreator_account().isBlank()) {
+            return false;
+        }
+        activity.setClass_id(classId.longValue());
+        if (activity.getDeadline() != null && !activity.getDeadline().isBlank()) {
+            activity.setDeadline(HomeworkDeadlineUtil.normalizeInput(activity.getDeadline()));
+        } else {
+            activity.setDeadline(null);
+        }
+        boolean ok = userMapper.addCourseActivity(activity);
+        if (ok && "announcement".equals(activity.getType())) {
+            notifyAnnouncementPublished(classId, activity.getTitle());
+        }
+        return ok;
+    }
+
+    private void notifyAnnouncementPublished(Integer classId, String title) {
+        List<CourseMember> members = userMapper.getCourseMembers(classId.longValue());
+        for (CourseMember member : members) {
+            if ("老师".equals(member.getStatus())) {
+                continue;
+            }
+            Notification notification = new Notification();
+            notification.setAccount(member.getAccount());
+            notification.setClass_id(classId);
+            notification.setType("announcement");
+            notification.setMessage("新公告：" + title);
             userMapper.addNotification(notification);
         }
     }

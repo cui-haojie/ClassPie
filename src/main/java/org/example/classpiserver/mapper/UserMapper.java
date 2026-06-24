@@ -63,8 +63,11 @@ public interface UserMapper {
     @Select("select * from courses where id = #{id}")
     Course getCourseByCourseId(@Param("id") Long id);
 
-    @Update("update courses set is_pinned = #{is_pinned} where id = #{id}")
-    boolean updateCoursePin(@Param("is_pinned") boolean is_pinned, @Param("id") Long id);
+    @Update("update account_course set is_pinned = #{is_pinned} where account = #{account} and class_id = #{class_id}")
+    boolean updateCoursePin(@Param("is_pinned") boolean is_pinned, @Param("account") String account, @Param("class_id") Long class_id);
+
+    @Select("select is_pinned from account_course where account = #{account} and class_id = #{class_id}")
+    Integer getCoursePinStatus(@Param("account") String account, @Param("class_id") Long class_id);
 
     @Select("select name from accounts where account = #{account}")
     String getAccountName(@Param("account") String account);
@@ -106,7 +109,7 @@ public interface UserMapper {
     @Update("update account_course set is_archived = #{archived} where account = #{account} and class_id = #{class_id}")
     boolean setCourseArchived(@Param("account") String account, @Param("class_id") Long class_id, @Param("archived") int archived);
 
-    @Select("SELECT a.account, a.name, a.status, a.status_number, a.avatar_url FROM accounts a INNER JOIN account_course ac ON a.account = ac.account WHERE ac.class_id = #{classId} AND ac.is_archived = 0")
+    @Select("SELECT a.account, a.name, a.status, a.status_number FROM accounts a INNER JOIN account_course ac ON a.account = ac.account WHERE ac.class_id = #{classId} AND ac.is_archived = 0")
     List<CourseMember> getCourseMembers(@Param("classId") Long classId);
 
     @Select("SELECT ac.account FROM account_course ac LEFT JOIN content c ON c.account = ac.account AND c.content_id = #{contentId} WHERE ac.class_id = #{classId} AND ac.is_archived = 0 AND c.account IS NULL")

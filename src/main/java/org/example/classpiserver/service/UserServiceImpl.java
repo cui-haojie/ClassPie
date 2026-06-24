@@ -96,7 +96,15 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<Long> getArchivedCourseIdByAccount(String account) {
-        return userMapper.getArchivedCourseIdByAccount(account);
+        List<Long> allCourseIds = userMapper.getCourseIdByAccount(account);
+        List<Long> archivedCourseIds = new ArrayList<>();
+        for (Long courseId : allCourseIds) {
+            Course course = userMapper.getCourseByCourseId(courseId);
+            if (course != null && Boolean.TRUE.equals(course.getIs_archived())) {
+                archivedCourseIds.add(courseId);
+            }
+        }
+        return archivedCourseIds;
     }
 
     @Override
@@ -121,7 +129,24 @@ public class UserServiceImpl implements UserService {
     public List<Course> getCourseByCourseId(List<Long> courseId) {
         List<Course> courseList = new ArrayList<>();
         for (Long id : courseId) {
-            courseList.add(userMapper.getCourseByCourseId(id));
+            Course course = userMapper.getCourseByCourseId(id);
+            if (course != null) {
+                courseList.add(course);
+            }
+        }
+        return courseList;
+    }
+
+    @Override
+    public List<Course> getCourseByCourseIdWithPinStatus(String account, List<Long> courseId) {
+        List<Course> courseList = new ArrayList<>();
+        for (Long id : courseId) {
+            Course course = userMapper.getCourseByCourseId(id);
+            if (course != null) {
+                Integer pinnedStatus = userMapper.getCoursePinStatus(account, id);
+                course.setIs_pinned(pinnedStatus != null && pinnedStatus == 1);
+                courseList.add(course);
+            }
         }
         return courseList;
     }
@@ -152,11 +177,10 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public boolean togglePinCourse(Long courseId, Boolean isPinned) {
+    public boolean togglePinCourse(String account, Long courseId, Boolean isPinned) {
         Course course = userMapper.getCourseByCourseId(courseId);
         if (course == null) return false;
-        course.setIs_pinned(isPinned);
-        return userMapper.updateCoursePin(isPinned,courseId);
+        return userMapper.updateCoursePin(isPinned, account, courseId);
     }
 
     @Override
@@ -497,11 +521,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public boolean archiveCourse(ArchiveCourseRequest request) {
-        if (request == null || request.getAccount() == null || request.getClass_id() == null) {
+        if (request == null || request.getClass_id() == null) {
             return false;
         }
         return userMapper.setCourseArchived(
-                request.getAccount(),
                 request.getClass_id(),
                 request.isArchived() ? 1 : 0
         );

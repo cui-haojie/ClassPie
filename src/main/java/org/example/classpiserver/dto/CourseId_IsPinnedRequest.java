@@ -3,6 +3,7 @@ package org.example.classpiserver.dto;
 public class CourseId_IsPinnedRequest {
     private Long id;
     private boolean is_pinned;
+    private String account;
 
     public Long getId() {
         return id;
@@ -18,5 +19,13 @@ public class CourseId_IsPinnedRequest {
 
     public void setIs_pinned(boolean is_pinned) {
         this.is_pinned = is_pinned;
+    }
+
+    public String getAccount() {
+        return account;
+    }
+
+    public void setAccount(String account) {
+        this.account = account;
     }
 }

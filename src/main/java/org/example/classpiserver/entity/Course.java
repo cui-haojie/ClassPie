@@ -14,9 +14,10 @@ private String class_name;
 private String class_time;
 private String selected_classes;
 private String code;
-private Boolean is_pinned;
 private Integer school_class_id;
 private String semester;
+private Boolean is_archived;
+private Boolean is_pinned;
 
     public String getClass_name() {
         return class_name;
@@ -66,14 +67,6 @@ private String semester;
         this.code = code;
     }
 
-    public Boolean getIs_pinned() {
-        return is_pinned;
-    }
-
-    public void setIs_pinned(Boolean is_pinned) {
-        this.is_pinned = is_pinned;
-    }
-
     public String getSemester() {
         return semester;
     }
@@ -88,5 +81,21 @@ private String semester;
 
     public void setSchool_class_id(Integer school_class_id) {
         this.school_class_id = school_class_id;
+    }
+
+    public Boolean getIs_archived() {
+        return is_archived;
+    }
+
+    public void setIs_archived(Boolean is_archived) {
+        this.is_archived = is_archived;
+    }
+
+    public Boolean getIs_pinned() {
+        return is_pinned;
+    }
+
+    public void setIs_pinned(Boolean is_pinned) {
+        this.is_pinned = is_pinned;
     }
 }

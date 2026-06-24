@@ -33,11 +33,8 @@ public interface UserMapper {
     @Delete("delete from account_course where class_id = #{id} and account = #{account}")
     boolean leaveCourse(@Param("id") Long id, @Param("account") String account);
 
-    @Select("select class_id from account_course where account = #{account} and is_archived = 0")
+    @Select("select class_id from account_course where account = #{account}")
     List<Long> getCourseIdByAccount(@Param("account") String account);
-
-    @Select("select class_id from account_course where account = #{account} and is_archived = 1")
-    List<Long> getArchivedCourseIdByAccount(@Param("account") String account);
 
     @Insert("insert into account_course (account, class_id) values (#{account}, #{class_id})")
     Course insertCourse(Account_course account_course);
@@ -54,8 +51,11 @@ public interface UserMapper {
     @Select("select * from courses where id = #{id}")
     Course getCourseByCourseId(@Param("id") Long id);
 
-    @Update("update courses set is_pinned = #{is_pinned} where id = #{id}")
-    boolean updateCoursePin(@Param("is_pinned") boolean is_pinned, @Param("id") Long id);
+    @Update("update account_course set is_pinned = #{is_pinned} where account = #{account} and class_id = #{class_id}")
+    boolean updateCoursePin(@Param("is_pinned") boolean is_pinned, @Param("account") String account, @Param("class_id") Long class_id);
+
+    @Select("select is_pinned from account_course where account = #{account} and class_id = #{class_id}")
+    Integer getCoursePinStatus(@Param("account") String account, @Param("class_id") Long class_id);
 
     @Select("select name from accounts where account = #{account}")
     String getAccountName(@Param("account") String account);
@@ -91,13 +91,13 @@ public interface UserMapper {
     @Update("update accounts set name = #{name}, mechanism = #{mechanism}, email_or_phone = #{email_or_phone}, status_number = #{status_number}, status = #{status} where account = #{account}")
     boolean updateAccount(Accounts account);
 
-    @Update("update account_course set is_archived = #{archived} where account = #{account} and class_id = #{class_id}")
-    boolean setCourseArchived(@Param("account") String account, @Param("class_id") Long class_id, @Param("archived") int archived);
+    @Update("update courses set is_archived = #{archived} where id = #{id}")
+    boolean setCourseArchived(@Param("id") Long id, @Param("archived") int archived);
 
-    @Select("SELECT a.account, a.name, a.status, a.status_number FROM accounts a INNER JOIN account_course ac ON a.account = ac.account WHERE ac.class_id = #{classId} AND ac.is_archived = 0")
+    @Select("SELECT a.account, a.name, a.status, a.status_number FROM accounts a INNER JOIN account_course ac ON a.account = ac.account WHERE ac.class_id = #{classId}")
     List<CourseMember> getCourseMembers(@Param("classId") Long classId);
 
-    @Select("SELECT ac.account FROM account_course ac LEFT JOIN content c ON c.account = ac.account AND c.content_id = #{contentId} WHERE ac.class_id = #{classId} AND ac.is_archived = 0 AND c.account IS NULL")
+    @Select("SELECT ac.account FROM account_course ac LEFT JOIN content c ON c.account = ac.account AND c.content_id = #{contentId} WHERE ac.class_id = #{classId} AND c.account IS NULL")
     List<String> getUnsubmittedAccounts(@Param("classId") Integer classId, @Param("contentId") Long contentId);
 
     @Insert("insert into notification (account, class_id, homework_id, type, message, is_read) values (#{account}, #{class_id}, #{homework_id}, #{type}, #{message}, 0)")

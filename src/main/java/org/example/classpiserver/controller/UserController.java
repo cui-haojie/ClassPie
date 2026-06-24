@@ -28,7 +28,7 @@ public class UserController {
 
     @PostMapping("/courses")
     public List<Course> getCourses(@RequestBody AccountRequest accountRequest) {
-        return userService.getCourseByCourseId(userService.getCourseIdByAccount(accountRequest.getAccount()));
+        return userService.getCourseByCourseIdWithPinStatus(accountRequest.getAccount(), userService.getCourseIdByAccount(accountRequest.getAccount()));
     }
 
     @PostMapping("/archivedCourses")
@@ -78,7 +78,7 @@ public class UserController {
 
     @PostMapping("/updatePinStatus")
     public boolean updatePinStatus(@RequestBody CourseId_IsPinnedRequest request) {
-        return userService.togglePinCourse(request.getId(),request.isIs_pinned());
+        return userService.togglePinCourse(request.getAccount(), request.getId(), request.isIs_pinned());
     }
 
     @PostMapping("/createCourse")

@@ -18,8 +18,9 @@ public interface UserService {
     Accounts getAccount(String account);
     Course getCourseByCode(String code, String account);
     List<Course> getCourseByCourseId(List<Long> id);
+    List<Course> getCourseByCourseIdWithPinStatus(String account, List<Long> id);
     void addCourse(String account,Long class_id);
-    boolean togglePinCourse(Long courseId, Boolean isPinned);
+    boolean togglePinCourse(String account, Long courseId, Boolean isPinned);
     String getAccountName(String account);
     Course addCourse(CourseRequest course);
     List<SchoolClass> listSchoolClasses();

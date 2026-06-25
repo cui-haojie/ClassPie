@@ -521,10 +521,11 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public boolean archiveCourse(ArchiveCourseRequest request) {
-        if (request == null || request.getClass_id() == null) {
+        if (request == null || request.getClass_id() == null || request.getAccount() == null || request.getAccount().isBlank()) {
             return false;
         }
         return userMapper.setCourseArchived(
+                request.getAccount(),
                 request.getClass_id(),
                 request.isArchived() ? 1 : 0
         );
@@ -820,6 +821,62 @@ public class UserServiceImpl implements UserService {
             notifyAnnouncementPublished(classId, activity.getTitle());
         }
         return ok;
+    }
+
+    private void normalizeActivityTimes(CourseActivity activity) {
+        if (activity == null) {
+            return;
+        }
+        if (activity.getDeadline() != null) {
+            activity.setDeadline(HomeworkDeadlineUtil.formatDisplay(activity.getDeadline()));
+        }
+        if (activity.getCreate_time() != null) {
+            activity.setCreate_time(HomeworkDeadlineUtil.formatDisplay(activity.getCreate_time()));
+        }
+    }
+
+    @Override
+    public CourseActivity getCourseActivityById(Long activityId) {
+        if (activityId == null) {
+            return null;
+        }
+        CourseActivity activity = userMapper.getCourseActivityById(activityId);
+        normalizeActivityTimes(activity);
+        return activity;
+    }
+
+    @Override
+    public List<CourseActivityReply> getActivityReplies(Long activityId) {
+        if (activityId == null) {
+            return List.of();
+        }
+        List<CourseActivityReply> replies = userMapper.getActivityReplies(activityId);
+        for (CourseActivityReply reply : replies) {
+            if (reply.getCreate_time() != null) {
+                reply.setCreate_time(HomeworkDeadlineUtil.formatDisplay(reply.getCreate_time()));
+            }
+        }
+        return replies;
+    }
+
+    @Override
+    public boolean addActivityReply(AddActivityReplyRequest request) {
+        if (request == null || request.getActivity_id() == null || request.getAccount() == null
+                || request.getAccount().isBlank() || request.getContent() == null || request.getContent().isBlank()) {
+            return false;
+        }
+        CourseActivity activity = userMapper.getCourseActivityById(request.getActivity_id());
+        if (activity == null) {
+            return false;
+        }
+        if ("test".equals(activity.getType()) && HomeworkDeadlineUtil.isDeadlinePassed(activity.getDeadline())) {
+            return false;
+        }
+        CourseActivityReply reply = new CourseActivityReply();
+        reply.setActivity_id(request.getActivity_id());
+        reply.setAccount(request.getAccount());
+        reply.setContent(request.getContent().trim());
+        return userMapper.addActivityReply(reply);
     }
 
     private void notifyAnnouncementPublished(Integer classId, String title) {

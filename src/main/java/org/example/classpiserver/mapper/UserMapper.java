@@ -204,10 +204,25 @@ public interface UserMapper {
             "values (#{activity.class_id}, #{activity.type}, #{activity.title}, #{activity.content}, #{activity.attachment_url}, #{activity.attachment_name}, #{activity.deadline}, #{activity.creator_account})")
     boolean addCourseActivity(@Param("activity") CourseActivity activity);
 
-    @Select("select ca.*, a.name as creator_name from course_activity ca " +
+    @Select("select ca.*, a.name as creator_name, " +
+            "(select count(*) from course_activity_reply r where r.activity_id = ca.id) as reply_count " +
+            "from course_activity ca " +
             "left join accounts a on ca.creator_account = a.account " +
             "where ca.class_id = #{class_id} and ca.type = #{type} order by ca.create_time desc")
     List<CourseActivity> getCourseActivitiesByType(@Param("class_id") Integer class_id, @Param("type") String type);
+
+    @Select("select ca.*, a.name as creator_name, " +
+            "(select count(*) from course_activity_reply r where r.activity_id = ca.id) as reply_count " +
+            "from course_activity ca left join accounts a on ca.creator_account = a.account where ca.id = #{id}")
+    CourseActivity getCourseActivityById(@Param("id") Long id);
+
+    @Select("select r.*, a.name as creator_name, a.avatar_url from course_activity_reply r " +
+            "inner join accounts a on r.account = a.account " +
+            "where r.activity_id = #{activity_id} order by r.create_time asc")
+    List<CourseActivityReply> getActivityReplies(@Param("activity_id") Long activity_id);
+
+    @Insert("insert into course_activity_reply (activity_id, account, content) values (#{activity_id}, #{account}, #{content})")
+    boolean addActivityReply(CourseActivityReply reply);
 
     @Select("select count(*) from course_activity where class_id = #{class_id} and type = #{type}")
     Integer countCourseActivitiesByType(@Param("class_id") Integer class_id, @Param("type") String type);

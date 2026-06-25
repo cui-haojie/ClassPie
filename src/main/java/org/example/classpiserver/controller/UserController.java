@@ -7,6 +7,7 @@ import org.example.classpiserver.entity.Courses_homework;
 import org.example.classpiserver.entity.Homework;
 import org.example.classpiserver.entity.Content;
 import org.example.classpiserver.entity.CourseActivity;
+import org.example.classpiserver.entity.CourseActivityReply;
 import org.example.classpiserver.entity.CourseMember;
 import org.example.classpiserver.entity.Notification;
 import org.example.classpiserver.entity.SchoolClass;
@@ -257,6 +258,21 @@ public class UserController {
     @PostMapping("/addCourseActivity")
     public boolean addCourseActivity(@RequestBody CourseActivityRequest request) {
         return userService.addCourseActivity(request.getActivity(), request.getClass_id());
+    }
+
+    @PostMapping("/getCourseActivityById")
+    public CourseActivity getCourseActivityById(@RequestBody ActivityIdRequest request) {
+        return userService.getCourseActivityById(request.getActivity_id());
+    }
+
+    @PostMapping("/getActivityReplies")
+    public List<CourseActivityReply> getActivityReplies(@RequestBody ActivityIdRequest request) {
+        return userService.getActivityReplies(request.getActivity_id());
+    }
+
+    @PostMapping("/addActivityReply")
+    public boolean addActivityReply(@RequestBody AddActivityReplyRequest request) {
+        return userService.addActivityReply(request);
     }
 
     @GetMapping("/downloadStudentImportTemplate")

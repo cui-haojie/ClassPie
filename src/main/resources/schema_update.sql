@@ -65,3 +65,15 @@ CREATE TABLE IF NOT EXISTS course_activity (
     PRIMARY KEY (id),
     INDEX idx_class_type (class_id, type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS course_activity_reply (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    activity_id BIGINT NOT NULL COMMENT '关联 course_activity.id',
+    account VARCHAR(64) NOT NULL,
+    content TEXT NOT NULL,
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    INDEX idx_activity_id (activity_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+ALTER TABLE courses MODIFY COLUMN class_time VARCHAR(512) NOT NULL COMMENT '上课时间，可多段';

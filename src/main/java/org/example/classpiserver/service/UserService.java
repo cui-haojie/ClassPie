@@ -56,4 +56,7 @@ public interface UserService {
     List<CourseActivity> getCourseActivities(Integer classId, String type);
     Integer countCourseActivities(Integer classId, String type);
     boolean addCourseActivity(CourseActivity activity, Integer classId);
+    CourseActivity getCourseActivityById(Long activityId);
+    List<CourseActivityReply> getActivityReplies(Long activityId);
+    boolean addActivityReply(AddActivityReplyRequest request);
 }

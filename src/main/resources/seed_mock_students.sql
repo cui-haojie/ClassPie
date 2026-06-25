@@ -1,11 +1,19 @@
 -- 仿真学生数据：为每门课程插入 12 名学生（账号密码均为 ClassPi123）
--- 在 MySQL t_class 库执行：source seed_mock_students.sql 或 mysql ... < seed_mock_students.sql
+-- 正确导入方式（勿用 PowerShell 管道，会乱码）：
+--   mysql -u root -p --default-character-set=utf8mb4 t_class < seed_mock_students.sql
+-- 或在 mysql 客户端内： source /path/to/seed_mock_students.sql
 USE t_class;
 
 SET NAMES utf8mb4;
+SET CHARACTER SET utf8mb4;
+
+-- 清理此前导入失败的乱码数据
+DELETE FROM account_course WHERE account LIKE 'sim%';
+DELETE FROM student_class WHERE account LIKE 'sim%';
+DELETE FROM accounts WHERE account LIKE 'sim%';
 
 -- ========== 课程 123 springboot ==========
-INSERT IGNORE INTO accounts (account, name, status, password, mechanism, email_or_phone, status_number) VALUES
+INSERT INTO accounts (account, name, status, password, mechanism, email_or_phone, status_number) VALUES
 ('sim123_01@stu.cqut.edu.cn', '张明', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010101'),
 ('sim123_02@stu.cqut.edu.cn', '李思琪', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010102'),
 ('sim123_03@stu.cqut.edu.cn', '王浩然', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010103'),
@@ -19,11 +27,11 @@ INSERT IGNORE INTO accounts (account, name, status, password, mechanism, email_o
 ('sim123_11@stu.cqut.edu.cn', '徐梦洁', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010111'),
 ('sim123_12@stu.cqut.edu.cn', '孙嘉豪', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010112');
 
-INSERT IGNORE INTO account_course (account, class_id, is_archived, sort_order)
+INSERT INTO account_course (account, class_id, is_archived, sort_order)
 SELECT account, 123, 0, 0 FROM accounts WHERE account LIKE 'sim123_%';
 
 -- ========== 课程 234 vue3 ==========
-INSERT IGNORE INTO accounts (account, name, status, password, mechanism, email_or_phone, status_number) VALUES
+INSERT INTO accounts (account, name, status, password, mechanism, email_or_phone, status_number) VALUES
 ('sim234_01@stu.cqut.edu.cn', '马文博', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010201'),
 ('sim234_02@stu.cqut.edu.cn', '朱诗涵', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010202'),
 ('sim234_03@stu.cqut.edu.cn', '胡天宇', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010203'),
@@ -37,11 +45,11 @@ INSERT IGNORE INTO accounts (account, name, status, password, mechanism, email_o
 ('sim234_11@stu.cqut.edu.cn', '郑浩宇', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010211'),
 ('sim234_12@stu.cqut.edu.cn', '谢若曦', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010212');
 
-INSERT IGNORE INTO account_course (account, class_id, is_archived, sort_order)
+INSERT INTO account_course (account, class_id, is_archived, sort_order)
 SELECT account, 234, 0, 0 FROM accounts WHERE account LIKE 'sim234_%';
 
 -- ========== 课程 345 html ==========
-INSERT IGNORE INTO accounts (account, name, status, password, mechanism, email_or_phone, status_number) VALUES
+INSERT INTO accounts (account, name, status, password, mechanism, email_or_phone, status_number) VALUES
 ('sim345_01@stu.cqut.edu.cn', '唐一鸣', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010301'),
 ('sim345_02@stu.cqut.edu.cn', '韩雪儿', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010302'),
 ('sim345_03@stu.cqut.edu.cn', '冯子骞', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010303'),
@@ -55,11 +63,11 @@ INSERT IGNORE INTO accounts (account, name, status, password, mechanism, email_o
 ('sim345_11@stu.cqut.edu.cn', '潘诗雅', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010311'),
 ('sim345_12@stu.cqut.edu.cn', '袁梓豪', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010312');
 
-INSERT IGNORE INTO account_course (account, class_id, is_archived, sort_order)
+INSERT INTO account_course (account, class_id, is_archived, sort_order)
 SELECT account, 345, 0, 0 FROM accounts WHERE account LIKE 'sim345_%';
 
 -- ========== 课程 346 css ==========
-INSERT IGNORE INTO accounts (account, name, status, password, mechanism, email_or_phone, status_number) VALUES
+INSERT INTO accounts (account, name, status, password, mechanism, email_or_phone, status_number) VALUES
 ('sim346_01@stu.cqut.edu.cn', '蔡明轩', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010401'),
 ('sim346_02@stu.cqut.edu.cn', '蒋欣妍', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010402'),
 ('sim346_03@stu.cqut.edu.cn', '沈子豪', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010403'),
@@ -73,11 +81,11 @@ INSERT IGNORE INTO accounts (account, name, status, password, mechanism, email_o
 ('sim346_11@stu.cqut.edu.cn', '谭俊宇', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010411'),
 ('sim346_12@stu.cqut.edu.cn', '邹雨晴', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010412');
 
-INSERT IGNORE INTO account_course (account, class_id, is_archived, sort_order)
+INSERT INTO account_course (account, class_id, is_archived, sort_order)
 SELECT account, 346, 0, 0 FROM accounts WHERE account LIKE 'sim346_%';
 
 -- ========== 课程 347 java ==========
-INSERT IGNORE INTO accounts (account, name, status, password, mechanism, email_or_phone, status_number) VALUES
+INSERT INTO accounts (account, name, status, password, mechanism, email_or_phone, status_number) VALUES
 ('sim347_01@stu.cqut.edu.cn', '石磊', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010501'),
 ('sim347_02@stu.cqut.edu.cn', '姜雨萌', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010502'),
 ('sim347_03@stu.cqut.edu.cn', '戴子轩', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010503'),
@@ -91,11 +99,11 @@ INSERT IGNORE INTO accounts (account, name, status, password, mechanism, email_o
 ('sim347_11@stu.cqut.edu.cn', '江子涵', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010511'),
 ('sim347_12@stu.cqut.edu.cn', '阎思远', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010512');
 
-INSERT IGNORE INTO account_course (account, class_id, is_archived, sort_order)
+INSERT INTO account_course (account, class_id, is_archived, sort_order)
 SELECT account, 347, 0, 0 FROM accounts WHERE account LIKE 'sim347_%';
 
 -- ========== 课程 348 计算机组成（关联软工2024 / 计科2024） ==========
-INSERT IGNORE INTO accounts (account, name, status, password, mechanism, email_or_phone, status_number) VALUES
+INSERT INTO accounts (account, name, status, password, mechanism, email_or_phone, status_number) VALUES
 ('sim348_01@stu.cqut.edu.cn', '方文博', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010601'),
 ('sim348_02@stu.cqut.edu.cn', '石佳怡', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010602'),
 ('sim348_03@stu.cqut.edu.cn', '熊子豪', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010603'),
@@ -109,16 +117,16 @@ INSERT IGNORE INTO accounts (account, name, status, password, mechanism, email_o
 ('sim348_11@stu.cqut.edu.cn', '段文轩', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010611'),
 ('sim348_12@stu.cqut.edu.cn', '雷诗涵', '学生', 'ClassPi123', '重庆理工大学', 'yes', '2024010612');
 
-INSERT IGNORE INTO account_course (account, class_id, is_archived, sort_order)
+INSERT INTO account_course (account, class_id, is_archived, sort_order)
 SELECT account, 348, 0, 0 FROM accounts WHERE account LIKE 'sim348_%';
 
 -- 前 6 人归属软工2024，后 6 人归属计科2024
-INSERT IGNORE INTO student_class (account, school_class_id)
+INSERT INTO student_class (account, school_class_id)
 SELECT account, 1 FROM accounts WHERE account IN (
     'sim348_01@stu.cqut.edu.cn','sim348_02@stu.cqut.edu.cn','sim348_03@stu.cqut.edu.cn',
     'sim348_04@stu.cqut.edu.cn','sim348_05@stu.cqut.edu.cn','sim348_06@stu.cqut.edu.cn'
 );
-INSERT IGNORE INTO student_class (account, school_class_id)
+INSERT INTO student_class (account, school_class_id)
 SELECT account, 2 FROM accounts WHERE account IN (
     'sim348_07@stu.cqut.edu.cn','sim348_08@stu.cqut.edu.cn','sim348_09@stu.cqut.edu.cn',
     'sim348_10@stu.cqut.edu.cn','sim348_11@stu.cqut.edu.cn','sim348_12@stu.cqut.edu.cn'

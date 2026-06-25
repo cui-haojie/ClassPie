@@ -12,6 +12,7 @@ public class CourseActivity {
     private String creator_account;
     private String creator_name;
     private String create_time;
+    private int reply_count;
 
     public Long getId() {
         return id;
@@ -99,5 +100,13 @@ public class CourseActivity {
 
     public void setCreate_time(String create_time) {
         this.create_time = create_time;
+    }
+
+    public int getReply_count() {
+        return reply_count;
+    }
+
+    public void setReply_count(int reply_count) {
+        this.reply_count = reply_count;
     }
 }

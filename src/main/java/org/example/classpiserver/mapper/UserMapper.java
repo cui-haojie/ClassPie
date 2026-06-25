@@ -36,7 +36,7 @@ public interface UserMapper {
     @Select("select class_id from account_course where account = #{account} and is_archived = 0 order by sort_order asc, class_id asc")
     List<Long> getCourseIdByAccount(@Param("account") String account);
 
-    @Select("select class_id from account_course where account = #{account} and is_archived = 1")
+    @Select("select class_id from account_course where account = #{account} and is_archived = 1 order by sort_order asc, class_id asc")
     List<Long> getArchivedCourseIdByAccount(@Param("account") String account);
 
     @Insert("insert into account_course (account, class_id) values (#{account}, #{class_id})")
@@ -63,10 +63,10 @@ public interface UserMapper {
     @Select("select * from courses where id = #{id}")
     Course getCourseByCourseId(@Param("id") Long id);
 
-    @Update("update account_course set is_pinned = #{is_pinned} where account = #{account} and class_id = #{class_id}")
+    @Update("update courses set is_pinned = #{is_pinned} where id = #{class_id}")
     boolean updateCoursePin(@Param("is_pinned") boolean is_pinned, @Param("account") String account, @Param("class_id") Long class_id);
 
-    @Select("select is_pinned from account_course where account = #{account} and class_id = #{class_id}")
+    @Select("select is_pinned from courses where id = #{class_id}")
     Integer getCoursePinStatus(@Param("account") String account, @Param("class_id") Long class_id);
 
     @Select("select name from accounts where account = #{account}")
@@ -108,6 +108,9 @@ public interface UserMapper {
 
     @Update("update account_course set is_archived = #{archived} where account = #{account} and class_id = #{class_id}")
     boolean setCourseArchived(@Param("account") String account, @Param("class_id") Long class_id, @Param("archived") int archived);
+
+    @Update("update account_course set is_archived = #{archived} where class_id = #{class_id}")
+    boolean setCourseArchivedForClass(@Param("class_id") Long class_id, @Param("archived") int archived);
 
     @Select("SELECT a.account, a.name, a.status, a.status_number FROM accounts a INNER JOIN account_course ac ON a.account = ac.account WHERE ac.class_id = #{classId} AND ac.is_archived = 0")
     List<CourseMember> getCourseMembers(@Param("classId") Long classId);

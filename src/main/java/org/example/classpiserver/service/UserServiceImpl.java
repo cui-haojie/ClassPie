@@ -96,15 +96,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<Long> getArchivedCourseIdByAccount(String account) {
-        List<Long> allCourseIds = userMapper.getCourseIdByAccount(account);
-        List<Long> archivedCourseIds = new ArrayList<>();
-        for (Long courseId : allCourseIds) {
-            Course course = userMapper.getCourseByCourseId(courseId);
-            if (course != null && Boolean.TRUE.equals(course.getIs_archived())) {
-                archivedCourseIds.add(courseId);
-            }
-        }
-        return archivedCourseIds;
+        return userMapper.getArchivedCourseIdByAccount(account);
     }
 
     @Override
@@ -524,8 +516,11 @@ public class UserServiceImpl implements UserService {
         if (request == null || request.getClass_id() == null || request.getAccount() == null || request.getAccount().isBlank()) {
             return false;
         }
-        return userMapper.setCourseArchived(
-                request.getAccount(),
+        Course course = userMapper.getCourseByCourseId(request.getClass_id());
+        if (course == null || !request.getAccount().equals(course.getTeacher_account())) {
+            return false;
+        }
+        return userMapper.setCourseArchivedForClass(
                 request.getClass_id(),
                 request.isArchived() ? 1 : 0
         );

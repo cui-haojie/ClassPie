@@ -15,6 +15,18 @@ public final class HomeworkDeadlineUtil {
         return end != null && LocalDateTime.now().isAfter(end);
     }
 
+    public static boolean isBeforeStart(String startTime) {
+        LocalDateTime start = parseDeadlineEnd(startTime);
+        return start != null && LocalDateTime.now().isBefore(start);
+    }
+
+    public static boolean isWithinWindow(String startTime, String endTime) {
+        if (startTime != null && !startTime.isBlank() && isBeforeStart(startTime)) {
+            return false;
+        }
+        return !isDeadlinePassed(endTime);
+    }
+
     /**
      * 仅日期或 00:00:00 视为当天 23:59:59 截止。
      */

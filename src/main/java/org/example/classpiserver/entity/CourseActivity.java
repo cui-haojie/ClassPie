@@ -8,11 +8,39 @@ public class CourseActivity {
     private String content;
     private String attachment_url;
     private String attachment_name;
+    private String start_time;
     private String deadline;
     private String creator_account;
     private String creator_name;
     private String create_time;
     private int reply_count;
+    private int choice_count;
+    private int short_count;
+    private String publish_status;
+
+    public String getPublish_status() {
+        return publish_status;
+    }
+
+    public void setPublish_status(String publish_status) {
+        this.publish_status = publish_status;
+    }
+
+    public int getChoice_count() {
+        return choice_count;
+    }
+
+    public void setChoice_count(int choice_count) {
+        this.choice_count = choice_count;
+    }
+
+    public int getShort_count() {
+        return short_count;
+    }
+
+    public void setShort_count(int short_count) {
+        this.short_count = short_count;
+    }
 
     public Long getId() {
         return id;
@@ -68,6 +96,14 @@ public class CourseActivity {
 
     public void setAttachment_name(String attachment_name) {
         this.attachment_name = attachment_name;
+    }
+
+    public String getStart_time() {
+        return start_time;
+    }
+
+    public void setStart_time(String start_time) {
+        this.start_time = start_time;
     }
 
     public String getDeadline() {

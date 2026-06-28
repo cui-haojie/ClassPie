@@ -38,7 +38,7 @@ public interface UserService {
     boolean updateCourseInfo(CourseUpdateRequest request);
     boolean archiveCourse(ArchiveCourseRequest request);
     List<CourseMember> getCourseMembers(Long classId);
-    boolean addHomework(Homework homework,Integer class_id);
+    boolean addHomework(Homework homework,Integer class_id, MultipartFile attachment);
     Integer getCountByClassId(Integer class_id);
     List<Homework> getHomeworkByClassId(Integer class_id);
     Homework getHomeworkById(Integer id);
@@ -52,11 +52,16 @@ public interface UserService {
     List<Notification> getNotifications(String account);
     Integer getUnreadNotificationCount(String account);
     boolean markNotificationRead(Integer id, String account);
+    boolean markAllNotificationsRead(String account);
     boolean remindHomework(RemindHomeworkRequest request);
-    List<CourseActivity> getCourseActivities(Integer classId, String type);
+    List<CourseActivity> getCourseActivities(Integer classId, String type, String account);
     Integer countCourseActivities(Integer classId, String type);
-    boolean addCourseActivity(CourseActivity activity, Integer classId);
+    boolean addCourseActivity(CourseActivity activity, Integer classId, MultipartFile attachment);
+    SaveTestDraftResult saveCourseTestDraft(AddCourseTestRequest request);
+    boolean addCourseTest(AddCourseTestRequest request);
+    TestDetailDTO getTestDetail(Long activityId, String account);
+    boolean submitTest(SubmitTestRequest request);
     CourseActivity getCourseActivityById(Long activityId);
     List<CourseActivityReply> getActivityReplies(Long activityId);
-    boolean addActivityReply(AddActivityReplyRequest request);
+    boolean addActivityReply(AddActivityReplyRequest request, MultipartFile image);
 }

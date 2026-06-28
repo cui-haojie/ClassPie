@@ -123,9 +123,20 @@ public class UserController {
         return userService.getCourseMembers(request.getId());
     }
 
-    @PostMapping("/addHomework")
-    public boolean addHomework(@RequestBody HomeworkRequest request) {
-        return userService.addHomework(request.getHomework(),request.getClass_id());
+    @PostMapping(value = "/addHomework", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public boolean addHomework(
+            @RequestParam("class_id") Integer class_id,
+            @RequestParam("name") String name,
+            @RequestParam("type") String type,
+            @RequestParam("deadline") String deadline,
+            @RequestParam(value = "details", required = false) String details,
+            @RequestParam(value = "file", required = false) MultipartFile file) {
+        Homework homework = new Homework();
+        homework.setName(name);
+        homework.setType(type);
+        homework.setDeadline(deadline);
+        homework.setDetails(details);
+        return userService.addHomework(homework, class_id, file);
     }
 
     @PostMapping("/getCountByClassId")
@@ -203,6 +214,11 @@ public class UserController {
         return userService.markNotificationRead(request.getId(), request.getAccount());
     }
 
+    @PutMapping("/readAllNotifications")
+    public boolean readAllNotifications(@RequestBody AccountRequest request) {
+        return userService.markAllNotificationsRead(request.getAccount());
+    }
+
     @PostMapping("/remindHomework")
     public boolean remindHomework(@RequestBody RemindHomeworkRequest request) {
         return userService.remindHomework(request);
@@ -247,7 +263,7 @@ public class UserController {
 
     @PostMapping("/getCourseActivities")
     public List<CourseActivity> getCourseActivities(@RequestBody CourseActivitiesRequest request) {
-        return userService.getCourseActivities(request.getClass_id(), request.getType());
+        return userService.getCourseActivities(request.getClass_id(), request.getType(), request.getAccount());
     }
 
     @PostMapping("/getCourseActivityCount")
@@ -255,9 +271,30 @@ public class UserController {
         return userService.countCourseActivities(request.getClass_id(), request.getType());
     }
 
-    @PostMapping("/addCourseActivity")
-    public boolean addCourseActivity(@RequestBody CourseActivityRequest request) {
-        return userService.addCourseActivity(request.getActivity(), request.getClass_id());
+    @PostMapping(value = "/addCourseActivity", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public boolean addCourseActivity(
+            @RequestParam("class_id") Integer class_id,
+            @RequestParam("type") String type,
+            @RequestParam("title") String title,
+            @RequestParam("creator_account") String creator_account,
+            @RequestParam(value = "content", required = false) String content,
+            @RequestParam(value = "start_time", required = false) String start_time,
+            @RequestParam(value = "deadline", required = false) String deadline,
+            @RequestParam(value = "attachment_url", required = false) String attachment_url,
+            @RequestParam(value = "attachment_name", required = false) String attachment_name,
+            @RequestParam(value = "file", required = false) MultipartFile file) {
+        CourseActivity activity = new CourseActivity();
+        activity.setType(type);
+        activity.setTitle(title);
+        activity.setCreator_account(creator_account);
+        activity.setContent(content);
+        activity.setStart_time(start_time);
+        activity.setDeadline(deadline);
+        if (file == null || file.isEmpty()) {
+            activity.setAttachment_url(attachment_url);
+            activity.setAttachment_name(attachment_name);
+        }
+        return userService.addCourseActivity(activity, class_id, file);
     }
 
     @PostMapping("/getCourseActivityById")
@@ -270,9 +307,41 @@ public class UserController {
         return userService.getActivityReplies(request.getActivity_id());
     }
 
-    @PostMapping("/addActivityReply")
-    public boolean addActivityReply(@RequestBody AddActivityReplyRequest request) {
-        return userService.addActivityReply(request);
+    @PostMapping(value = "/addActivityReply", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public boolean addActivityReply(
+            @RequestParam("activity_id") Long activity_id,
+            @RequestParam("account") String account,
+            @RequestParam(value = "content", required = false) String content,
+            @RequestParam(value = "file", required = false) MultipartFile file) {
+        AddActivityReplyRequest request = new AddActivityReplyRequest();
+        request.setActivity_id(activity_id);
+        request.setAccount(account);
+        request.setContent(content);
+        return userService.addActivityReply(request, file);
+    }
+
+    @PostMapping("/addCourseTest")
+    public boolean addCourseTest(@RequestBody AddCourseTestRequest request) {
+        try {
+            return userService.addCourseTest(request);
+        } catch (IllegalArgumentException ex) {
+            return false;
+        }
+    }
+
+    @PostMapping("/saveCourseTestDraft")
+    public SaveTestDraftResult saveCourseTestDraft(@RequestBody AddCourseTestRequest request) {
+        return userService.saveCourseTestDraft(request);
+    }
+
+    @PostMapping("/getTestDetail")
+    public TestDetailDTO getTestDetail(@RequestBody GetTestDetailRequest request) {
+        return userService.getTestDetail(request.getActivity_id(), request.getAccount());
+    }
+
+    @PostMapping("/submitTest")
+    public boolean submitTest(@RequestBody SubmitTestRequest request) {
+        return userService.submitTest(request);
     }
 
     @GetMapping("/downloadStudentImportTemplate")

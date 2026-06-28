@@ -49,6 +49,18 @@ public class FileStorageService {
         return new StoredFile("/uploads/attachments/" + storedName, originalName);
     }
 
+    public StoredFile saveTopicImage(MultipartFile file) throws IOException {
+        validateFile(file, IMAGE_EXTENSIONS, 5 * 1024 * 1024);
+        String ext = resolveExtension(file.getOriginalFilename(), IMAGE_EXTENSIONS);
+        Path dir = uploadRoot.resolve("topic-images");
+        Files.createDirectories(dir);
+        String storedName = UUID.randomUUID().toString().replace("-", "") + ext;
+        Path target = dir.resolve(storedName);
+        Files.write(target, file.getBytes());
+        String originalName = sanitizeOriginalName(file.getOriginalFilename());
+        return new StoredFile("/uploads/topic-images/" + storedName, originalName);
+    }
+
     public Path getUploadRoot() {
         return uploadRoot;
     }

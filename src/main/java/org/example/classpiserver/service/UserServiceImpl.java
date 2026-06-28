@@ -13,8 +13,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -532,10 +534,15 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public boolean addHomework(Homework homework, Integer class_id) {
+    public boolean addHomework(Homework homework, Integer class_id, MultipartFile attachment) {
         try {
             if (homework.getDeadline() != null) {
                 homework.setDeadline(HomeworkDeadlineUtil.normalizeInput(homework.getDeadline()));
+            }
+            if (attachment != null && !attachment.isEmpty()) {
+                FileStorageService.StoredFile stored = fileStorageService.saveHomeworkAttachment(attachment);
+                homework.setAttachment_url(stored.url());
+                homework.setAttachment_name(stored.originalName());
             }
             userMapper.addHomework(homework);
             Integer homeworkId = userMapper.getLastInsertId();
@@ -719,7 +726,18 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public boolean markNotificationRead(Integer id, String account) {
+        if (id == null || account == null || account.isBlank()) {
+            return false;
+        }
         return userMapper.markNotificationRead(id, account);
+    }
+
+    @Override
+    public boolean markAllNotificationsRead(String account) {
+        if (account == null || account.isBlank()) {
+            return false;
+        }
+        return userMapper.markAllNotificationsRead(account);
     }
 
     @Override
@@ -769,14 +787,25 @@ public class UserServiceImpl implements UserService {
     );
 
     @Override
-    public List<CourseActivity> getCourseActivities(Integer classId, String type) {
+    public List<CourseActivity> getCourseActivities(Integer classId, String type, String account) {
         if (classId == null || type == null || !COURSE_ACTIVITY_TYPES.contains(type)) {
             return List.of();
         }
-        List<CourseActivity> activities = userMapper.getCourseActivitiesByType(classId, type);
+        List<CourseActivity> activities;
+        if ("test".equals(type)) {
+            boolean isTeacher = "老师".equals(userMapper.getAccountStatus(account));
+            activities = isTeacher
+                    ? userMapper.getCourseTestsByClassId(classId)
+                    : userMapper.getPublishedCourseTestsByClassId(classId);
+        } else {
+            activities = userMapper.getCourseActivitiesByType(classId, type);
+        }
         for (CourseActivity activity : activities) {
             if (activity.getDeadline() != null) {
                 activity.setDeadline(HomeworkDeadlineUtil.formatDisplay(activity.getDeadline()));
+            }
+            if (activity.getStart_time() != null) {
+                activity.setStart_time(HomeworkDeadlineUtil.formatDisplay(activity.getStart_time()));
             }
             if (activity.getCreate_time() != null) {
                 activity.setCreate_time(HomeworkDeadlineUtil.formatDisplay(activity.getCreate_time()));
@@ -795,7 +824,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public boolean addCourseActivity(CourseActivity activity, Integer classId) {
+    public boolean addCourseActivity(CourseActivity activity, Integer classId, MultipartFile attachment) {
         if (activity == null || classId == null || activity.getTitle() == null || activity.getTitle().isBlank()) {
             return false;
         }
@@ -805,11 +834,28 @@ public class UserServiceImpl implements UserService {
         if (activity.getCreator_account() == null || activity.getCreator_account().isBlank()) {
             return false;
         }
+        if ("test".equals(activity.getType())) {
+            return false;
+        }
         activity.setClass_id(classId.longValue());
+        activity.setPublish_status("published");
         if (activity.getDeadline() != null && !activity.getDeadline().isBlank()) {
             activity.setDeadline(HomeworkDeadlineUtil.normalizeInput(activity.getDeadline()));
         } else {
             activity.setDeadline(null);
+            activity.setStart_time(null);
+        }
+        if (attachment != null && !attachment.isEmpty()) {
+            try {
+                FileStorageService.StoredFile stored = fileStorageService.saveHomeworkAttachment(attachment);
+                activity.setAttachment_url(stored.url());
+                activity.setAttachment_name(stored.originalName());
+            } catch (IllegalArgumentException ex) {
+                throw ex;
+            } catch (IOException ex) {
+                System.err.println("资料附件上传失败: " + ex.getMessage());
+                return false;
+            }
         }
         boolean ok = userMapper.addCourseActivity(activity);
         if (ok && "announcement".equals(activity.getType())) {
@@ -818,12 +864,329 @@ public class UserServiceImpl implements UserService {
         return ok;
     }
 
+    @Override
+    public SaveTestDraftResult saveCourseTestDraft(AddCourseTestRequest request) {
+        if (request == null || request.getClass_id() == null || request.getTitle() == null || request.getTitle().isBlank()) {
+            return new SaveTestDraftResult(null, false);
+        }
+        if (request.getCreator_account() == null || request.getCreator_account().isBlank()) {
+            return new SaveTestDraftResult(null, false);
+        }
+        String startTime = normalizeOptionalTime(request.getStart_time());
+        String endTime = normalizeOptionalTime(request.getDeadline());
+        if (startTime != null && endTime != null) {
+            var start = HomeworkDeadlineUtil.parseDeadlineEnd(startTime);
+            var end = HomeworkDeadlineUtil.parseDeadlineEnd(endTime);
+            if (start == null || end == null || !start.isBefore(end)) {
+                return new SaveTestDraftResult(null, false);
+            }
+        }
+        Long activityId = request.getActivity_id();
+        if (activityId != null) {
+            CourseActivity existing = userMapper.getCourseActivityById(activityId);
+            if (existing == null || !"test".equals(existing.getType()) || !"draft".equals(existing.getPublish_status())) {
+                return new SaveTestDraftResult(null, false);
+            }
+            if (!request.getCreator_account().equals(existing.getCreator_account())) {
+                return new SaveTestDraftResult(null, false);
+            }
+            if (!userMapper.updateCourseTest(activityId, request.getTitle().trim(),
+                    trimOrNull(request.getContent()), startTime, endTime, "draft")) {
+                return new SaveTestDraftResult(null, false);
+            }
+        } else {
+            CourseActivity activity = new CourseActivity();
+            activity.setClass_id(request.getClass_id().longValue());
+            activity.setType("test");
+            activity.setTitle(request.getTitle().trim());
+            activity.setContent(trimOrNull(request.getContent()));
+            activity.setStart_time(startTime);
+            activity.setDeadline(endTime);
+            activity.setCreator_account(request.getCreator_account());
+            activity.setPublish_status("draft");
+            if (!userMapper.addCourseActivity(activity)) {
+                return new SaveTestDraftResult(null, false);
+            }
+            activityId = activity.getId();
+            if (activityId == null) {
+                return new SaveTestDraftResult(null, false);
+            }
+        }
+        replaceTestQuestions(activityId, request.getQuestions(), false);
+        return new SaveTestDraftResult(activityId, true);
+    }
+
+    @Override
+    public boolean addCourseTest(AddCourseTestRequest request) {
+        if (request == null || request.getClass_id() == null || request.getTitle() == null || request.getTitle().isBlank()) {
+            return false;
+        }
+        if (request.getCreator_account() == null || request.getCreator_account().isBlank()) {
+            return false;
+        }
+        if (request.getStart_time() == null || request.getStart_time().isBlank()
+                || request.getDeadline() == null || request.getDeadline().isBlank()) {
+            return false;
+        }
+        List<TestQuestionInput> inputs = request.getQuestions();
+        if (inputs == null || inputs.isEmpty()) {
+            return false;
+        }
+        String startTime = HomeworkDeadlineUtil.normalizeInput(request.getStart_time());
+        String endTime = HomeworkDeadlineUtil.normalizeInput(request.getDeadline());
+        var start = HomeworkDeadlineUtil.parseDeadlineEnd(startTime);
+        var end = HomeworkDeadlineUtil.parseDeadlineEnd(endTime);
+        if (start == null || end == null || !start.isBefore(end)) {
+            return false;
+        }
+        Long activityId = request.getActivity_id();
+        if (activityId != null) {
+            CourseActivity existing = userMapper.getCourseActivityById(activityId);
+            if (existing == null || !"test".equals(existing.getType()) || !"draft".equals(existing.getPublish_status())) {
+                return false;
+            }
+            if (!request.getCreator_account().equals(existing.getCreator_account())) {
+                return false;
+            }
+            if (!userMapper.updateCourseTest(activityId, request.getTitle().trim(),
+                    trimOrNull(request.getContent()), startTime, endTime, "published")) {
+                return false;
+            }
+        } else {
+            CourseActivity activity = new CourseActivity();
+            activity.setClass_id(request.getClass_id().longValue());
+            activity.setType("test");
+            activity.setTitle(request.getTitle().trim());
+            activity.setContent(trimOrNull(request.getContent()));
+            activity.setStart_time(startTime);
+            activity.setDeadline(endTime);
+            activity.setCreator_account(request.getCreator_account());
+            activity.setPublish_status("published");
+            if (!userMapper.addCourseActivity(activity)) {
+                return false;
+            }
+            activityId = activity.getId();
+            if (activityId == null) {
+                return false;
+            }
+        }
+        try {
+            replaceTestQuestions(activityId, inputs, true);
+        } catch (IllegalArgumentException ex) {
+            return false;
+        }
+        notifyTestPublished(request.getClass_id(), request.getTitle().trim());
+        return true;
+    }
+
+    private static String trimOrNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static String normalizeOptionalTime(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return HomeworkDeadlineUtil.normalizeInput(value);
+    }
+
+    private void replaceTestQuestions(Long activityId, List<TestQuestionInput> inputs, boolean strict) {
+        userMapper.deleteTestQuestionsByActivityId(activityId);
+        if (inputs == null || inputs.isEmpty()) {
+            if (strict) {
+                throw new IllegalArgumentException("题目不能为空");
+            }
+            return;
+        }
+        int order = 0;
+        for (TestQuestionInput input : inputs) {
+            if (input == null || input.getQuestion_type() == null) {
+                if (strict) {
+                    throw new IllegalArgumentException("题目信息不完整");
+                }
+                continue;
+            }
+            String stem = input.getStem() == null ? "" : input.getStem().trim();
+            if (stem.isEmpty()) {
+                if (strict) {
+                    throw new IllegalArgumentException("题目信息不完整");
+                }
+                continue;
+            }
+            String qType = input.getQuestion_type().trim();
+            if (!"choice".equals(qType) && !"short".equals(qType)) {
+                if (strict) {
+                    throw new IllegalArgumentException("题目类型无效");
+                }
+                continue;
+            }
+            TestQuestion question = new TestQuestion();
+            question.setActivity_id(activityId);
+            question.setQuestion_type(qType);
+            question.setStem(stem);
+            question.setSort_order(order++);
+            int score = input.getScore() == null || input.getScore() <= 0 ? 5 : input.getScore();
+            question.setScore(score);
+            if ("choice".equals(qType)) {
+                if (isBlank(input.getOption_a()) || isBlank(input.getOption_b())
+                        || isBlank(input.getOption_c()) || isBlank(input.getOption_d())) {
+                    if (strict) {
+                        throw new IllegalArgumentException("选择题选项不完整");
+                    }
+                    continue;
+                }
+                String correct = input.getCorrect_option() == null ? "" : input.getCorrect_option().trim().toUpperCase();
+                if (!Set.of("A", "B", "C", "D").contains(correct)) {
+                    if (strict) {
+                        throw new IllegalArgumentException("请选择正确答案");
+                    }
+                    continue;
+                }
+                question.setOption_a(input.getOption_a().trim());
+                question.setOption_b(input.getOption_b().trim());
+                question.setOption_c(input.getOption_c().trim());
+                question.setOption_d(input.getOption_d().trim());
+                question.setCorrect_option(correct);
+            }
+            if (!userMapper.addTestQuestion(question)) {
+                throw new IllegalArgumentException("保存题目失败");
+            }
+        }
+        if (strict && order == 0) {
+            throw new IllegalArgumentException("题目不能为空");
+        }
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    @Override
+    public TestDetailDTO getTestDetail(Long activityId, String account) {
+        if (activityId == null) {
+            return null;
+        }
+        CourseActivity activity = userMapper.getCourseActivityById(activityId);
+        if (activity == null || !"test".equals(activity.getType())) {
+            return null;
+        }
+        String status = userMapper.getAccountStatus(account);
+        boolean isTeacher = "老师".equals(status);
+        if ("draft".equals(activity.getPublish_status()) && !isTeacher) {
+            return null;
+        }
+        normalizeActivityTimes(activity);
+        List<TestQuestion> questions = userMapper.getTestQuestionsByActivityId(activityId);
+        int choiceCount = 0;
+        int shortCount = 0;
+        for (TestQuestion q : questions) {
+            if ("choice".equals(q.getQuestion_type())) {
+                choiceCount++;
+            } else if ("short".equals(q.getQuestion_type())) {
+                shortCount++;
+            }
+        }
+        if (!isTeacher) {
+            for (TestQuestion q : questions) {
+                q.setCorrect_option(null);
+            }
+        }
+        TestDetailDTO dto = new TestDetailDTO();
+        dto.setActivity(activity);
+        dto.setQuestions(questions);
+        dto.setChoice_count(choiceCount);
+        dto.setShort_count(shortCount);
+        dto.setIs_teacher(isTeacher);
+        dto.setSubmitted(false);
+        dto.setMy_answers(Map.of());
+        if (account != null && !account.isBlank()) {
+            TestSubmission submission = userMapper.getTestSubmissionByAccount(activityId, account);
+            if (submission != null) {
+                dto.setSubmitted(true);
+                if (submission.getSubmit_time() != null) {
+                    submission.setSubmit_time(HomeworkDeadlineUtil.formatDisplay(submission.getSubmit_time()));
+                }
+                Map<Long, String> answers = new HashMap<>();
+                List<Map<String, Object>> rows = userMapper.getTestAnswersBySubmissionId(submission.getId());
+                for (Map<String, Object> row : rows) {
+                    Object qid = row.get("question_id");
+                    Object ans = row.get("answer");
+                    if (qid != null) {
+                        answers.put(((Number) qid).longValue(), ans == null ? "" : String.valueOf(ans));
+                    }
+                }
+                dto.setMy_answers(answers);
+            }
+        }
+        return dto;
+    }
+
+    @Override
+    public boolean submitTest(SubmitTestRequest request) {
+        if (request == null || request.getActivity_id() == null || request.getAccount() == null
+                || request.getAccount().isBlank()) {
+            return false;
+        }
+        CourseActivity activity = userMapper.getCourseActivityById(request.getActivity_id());
+        if (activity == null || !"test".equals(activity.getType())) {
+            return false;
+        }
+        if (!"published".equals(activity.getPublish_status())) {
+            return false;
+        }
+        if (!HomeworkDeadlineUtil.isWithinWindow(activity.getStart_time(), activity.getDeadline())) {
+            return false;
+        }
+        TestSubmission existing = userMapper.getTestSubmissionByAccount(request.getActivity_id(), request.getAccount());
+        if (existing != null) {
+            return false;
+        }
+        List<TestQuestion> questions = userMapper.getTestQuestionsByActivityId(request.getActivity_id());
+        if (questions.isEmpty()) {
+            return false;
+        }
+        Map<Long, String> answerMap = new HashMap<>();
+        if (request.getAnswers() != null) {
+            for (TestAnswerInput input : request.getAnswers()) {
+                if (input != null && input.getQuestion_id() != null) {
+                    answerMap.put(input.getQuestion_id(), input.getAnswer() == null ? "" : input.getAnswer().trim());
+                }
+            }
+        }
+        for (TestQuestion question : questions) {
+            String answer = answerMap.getOrDefault(question.getId(), "");
+            if (answer.isBlank()) {
+                return false;
+            }
+        }
+        TestSubmission submission = new TestSubmission();
+        submission.setActivity_id(request.getActivity_id());
+        submission.setAccount(request.getAccount());
+        if (!userMapper.addTestSubmission(submission)) {
+            return false;
+        }
+        for (TestQuestion question : questions) {
+            String answer = answerMap.getOrDefault(question.getId(), "");
+            if (!userMapper.addTestAnswer(submission.getId(), question.getId(), answer)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private void normalizeActivityTimes(CourseActivity activity) {
         if (activity == null) {
             return;
         }
         if (activity.getDeadline() != null) {
             activity.setDeadline(HomeworkDeadlineUtil.formatDisplay(activity.getDeadline()));
+        }
+        if (activity.getStart_time() != null) {
+            activity.setStart_time(HomeworkDeadlineUtil.formatDisplay(activity.getStart_time()));
         }
         if (activity.getCreate_time() != null) {
             activity.setCreate_time(HomeworkDeadlineUtil.formatDisplay(activity.getCreate_time()));
@@ -855,22 +1218,36 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public boolean addActivityReply(AddActivityReplyRequest request) {
+    public boolean addActivityReply(AddActivityReplyRequest request, MultipartFile image) {
         if (request == null || request.getActivity_id() == null || request.getAccount() == null
-                || request.getAccount().isBlank() || request.getContent() == null || request.getContent().isBlank()) {
+                || request.getAccount().isBlank()) {
+            return false;
+        }
+        String text = request.getContent() == null ? "" : request.getContent().trim();
+        boolean hasImage = image != null && !image.isEmpty();
+        if (text.isEmpty() && !hasImage) {
             return false;
         }
         CourseActivity activity = userMapper.getCourseActivityById(request.getActivity_id());
-        if (activity == null) {
-            return false;
-        }
-        if ("test".equals(activity.getType()) && HomeworkDeadlineUtil.isDeadlinePassed(activity.getDeadline())) {
+        if (activity == null || "test".equals(activity.getType())) {
             return false;
         }
         CourseActivityReply reply = new CourseActivityReply();
         reply.setActivity_id(request.getActivity_id());
         reply.setAccount(request.getAccount());
-        reply.setContent(request.getContent().trim());
+        reply.setContent(text);
+        if (hasImage) {
+            try {
+                FileStorageService.StoredFile stored = fileStorageService.saveTopicImage(image);
+                reply.setAttachment_url(stored.url());
+                reply.setAttachment_name(stored.originalName());
+            } catch (IllegalArgumentException ex) {
+                throw ex;
+            } catch (IOException ex) {
+                System.err.println("话题图片上传失败: " + ex.getMessage());
+                return false;
+            }
+        }
         return userMapper.addActivityReply(reply);
     }
 
@@ -885,6 +1262,21 @@ public class UserServiceImpl implements UserService {
             notification.setClass_id(classId);
             notification.setType("announcement");
             notification.setMessage("新公告：" + title);
+            userMapper.addNotification(notification);
+        }
+    }
+
+    private void notifyTestPublished(Integer classId, String title) {
+        List<CourseMember> members = userMapper.getCourseMembers(classId.longValue());
+        for (CourseMember member : members) {
+            if ("老师".equals(member.getStatus())) {
+                continue;
+            }
+            Notification notification = new Notification();
+            notification.setAccount(member.getAccount());
+            notification.setClass_id(classId);
+            notification.setType("test");
+            notification.setMessage("新测试发布：" + title);
             userMapper.addNotification(notification);
         }
     }

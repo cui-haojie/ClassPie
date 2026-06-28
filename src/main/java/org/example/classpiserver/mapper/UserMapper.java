@@ -78,8 +78,8 @@ public interface UserMapper {
     @Select("select count(*) from t_class.account_course where class_id = #{id}")
     Integer getCountByCourseId(@Param("id") Long id);
 
-    @Insert("insert into homework (homework_id,content_id,name,deadline,type,isCorrect,score,details)" +
-            " values (#{homework.homework_id}, #{homework.content_id}, #{homework.name}, #{homework.deadline}, #{homework.type}, #{homework.isCorrect}, #{homework.score}, #{homework.details})")
+    @Insert("insert into homework (homework_id,content_id,name,deadline,type,isCorrect,score,details,attachment_url,attachment_name)" +
+            " values (#{homework.homework_id}, #{homework.content_id}, #{homework.name}, #{homework.deadline}, #{homework.type}, #{homework.isCorrect}, #{homework.score}, #{homework.details}, #{homework.attachment_url}, #{homework.attachment_name})")
     boolean addHomework(@Param("homework") Homework homework);
 
     @Insert("insert into courses_homework (class_id , homework_id) values (#{class_id}, #{homework_id})")
@@ -126,6 +126,9 @@ public interface UserMapper {
 
     @Update("update notification set is_read = 1 where id = #{id} and account = #{account}")
     boolean markNotificationRead(@Param("id") Integer id, @Param("account") String account);
+
+    @Update("update notification set is_read = 1 where account = #{account} and is_read = 0")
+    boolean markAllNotificationsRead(@Param("account") String account);
 
     @Select("select count(*) from notification where account = #{account} and is_read = 0")
     Integer getUnreadNotificationCount(@Param("account") String account);
@@ -203,19 +206,46 @@ public interface UserMapper {
     @Select("select sc.* from student_class st join school_class sc on st.school_class_id = sc.id where st.account = #{account} order by sc.id")
     List<SchoolClass> getSchoolClassesByStudentAccount(@Param("account") String account);
 
-    @Insert("insert into course_activity (class_id, type, title, content, attachment_url, attachment_name, deadline, creator_account) " +
-            "values (#{activity.class_id}, #{activity.type}, #{activity.title}, #{activity.content}, #{activity.attachment_url}, #{activity.attachment_name}, #{activity.deadline}, #{activity.creator_account})")
+    @Insert("insert into course_activity (class_id, type, title, content, attachment_url, attachment_name, start_time, deadline, creator_account, publish_status) " +
+            "values (#{activity.class_id}, #{activity.type}, #{activity.title}, #{activity.content}, #{activity.attachment_url}, #{activity.attachment_name}, #{activity.start_time}, #{activity.deadline}, #{activity.creator_account}, #{activity.publish_status})")
+    @Options(useGeneratedKeys = true, keyProperty = "activity.id")
     boolean addCourseActivity(@Param("activity") CourseActivity activity);
 
+    @Update("update course_activity set title = #{title}, content = #{content}, start_time = #{start_time}, deadline = #{deadline}, publish_status = #{publish_status} where id = #{id} and type = 'test'")
+    boolean updateCourseTest(@Param("id") Long id, @Param("title") String title, @Param("content") String content,
+                             @Param("start_time") String start_time, @Param("deadline") String deadline,
+                             @Param("publish_status") String publish_status);
+
     @Select("select ca.*, a.name as creator_name, " +
-            "(select count(*) from course_activity_reply r where r.activity_id = ca.id) as reply_count " +
+            "(select count(*) from course_test_submission s where s.activity_id = ca.id) as reply_count, " +
+            "(select count(*) from course_test_question q where q.activity_id = ca.id and q.question_type = 'choice') as choice_count, " +
+            "(select count(*) from course_test_question q where q.activity_id = ca.id and q.question_type = 'short') as short_count " +
+            "from course_activity ca " +
+            "left join accounts a on ca.creator_account = a.account " +
+            "where ca.class_id = #{class_id} and ca.type = 'test' order by ca.create_time desc")
+    List<CourseActivity> getCourseTestsByClassId(@Param("class_id") Integer class_id);
+
+    @Select("select ca.*, a.name as creator_name, " +
+            "(select count(*) from course_test_submission s where s.activity_id = ca.id) as reply_count, " +
+            "(select count(*) from course_test_question q where q.activity_id = ca.id and q.question_type = 'choice') as choice_count, " +
+            "(select count(*) from course_test_question q where q.activity_id = ca.id and q.question_type = 'short') as short_count " +
+            "from course_activity ca " +
+            "left join accounts a on ca.creator_account = a.account " +
+            "where ca.class_id = #{class_id} and ca.type = 'test' and ca.publish_status = 'published' order by ca.create_time desc")
+    List<CourseActivity> getPublishedCourseTestsByClassId(@Param("class_id") Integer class_id);
+
+    @Select("select ca.*, a.name as creator_name, " +
+            "(select count(*) from course_activity_reply r where r.activity_id = ca.id) as reply_count, " +
+            "0 as choice_count, 0 as short_count " +
             "from course_activity ca " +
             "left join accounts a on ca.creator_account = a.account " +
             "where ca.class_id = #{class_id} and ca.type = #{type} order by ca.create_time desc")
     List<CourseActivity> getCourseActivitiesByType(@Param("class_id") Integer class_id, @Param("type") String type);
 
     @Select("select ca.*, a.name as creator_name, " +
-            "(select count(*) from course_activity_reply r where r.activity_id = ca.id) as reply_count " +
+            "(select count(*) from course_test_submission s where s.activity_id = ca.id) as reply_count, " +
+            "(select count(*) from course_test_question q where q.activity_id = ca.id and q.question_type = 'choice') as choice_count, " +
+            "(select count(*) from course_test_question q where q.activity_id = ca.id and q.question_type = 'short') as short_count " +
             "from course_activity ca left join accounts a on ca.creator_account = a.account where ca.id = #{id}")
     CourseActivity getCourseActivityById(@Param("id") Long id);
 
@@ -224,9 +254,35 @@ public interface UserMapper {
             "where r.activity_id = #{activity_id} order by r.create_time asc")
     List<CourseActivityReply> getActivityReplies(@Param("activity_id") Long activity_id);
 
-    @Insert("insert into course_activity_reply (activity_id, account, content) values (#{activity_id}, #{account}, #{content})")
+    @Insert("insert into course_activity_reply (activity_id, account, content, attachment_url, attachment_name) values (#{activity_id}, #{account}, #{content}, #{attachment_url}, #{attachment_name})")
     boolean addActivityReply(CourseActivityReply reply);
+
+    @Select("select count(*) from course_activity_reply where activity_id = #{activity_id} and account = #{account}")
+    Integer countActivityReplyByAccount(@Param("activity_id") Long activity_id, @Param("account") String account);
 
     @Select("select count(*) from course_activity where class_id = #{class_id} and type = #{type}")
     Integer countCourseActivitiesByType(@Param("class_id") Integer class_id, @Param("type") String type);
+
+    @Insert("insert into course_test_question (activity_id, question_type, stem, option_a, option_b, option_c, option_d, correct_option, score, sort_order) " +
+            "values (#{activity_id}, #{question_type}, #{stem}, #{option_a}, #{option_b}, #{option_c}, #{option_d}, #{correct_option}, #{score}, #{sort_order})")
+    boolean addTestQuestion(TestQuestion question);
+
+    @Select("select * from course_test_question where activity_id = #{activity_id} order by sort_order asc, id asc")
+    List<TestQuestion> getTestQuestionsByActivityId(@Param("activity_id") Long activity_id);
+
+    @Delete("delete from course_test_question where activity_id = #{activity_id}")
+    boolean deleteTestQuestionsByActivityId(@Param("activity_id") Long activity_id);
+
+    @Select("select * from course_test_submission where activity_id = #{activity_id} and account = #{account} limit 1")
+    TestSubmission getTestSubmissionByAccount(@Param("activity_id") Long activity_id, @Param("account") String account);
+
+    @Insert("insert into course_test_submission (activity_id, account) values (#{activity_id}, #{account})")
+    @Options(useGeneratedKeys = true, keyProperty = "id")
+    boolean addTestSubmission(TestSubmission submission);
+
+    @Insert("insert into course_test_answer (submission_id, question_id, answer) values (#{submission_id}, #{question_id}, #{answer})")
+    boolean addTestAnswer(@Param("submission_id") Long submission_id, @Param("question_id") Long question_id, @Param("answer") String answer);
+
+    @Select("select question_id, answer from course_test_answer where submission_id = #{submission_id}")
+    List<java.util.Map<String, Object>> getTestAnswersBySubmissionId(@Param("submission_id") Long submission_id);
 }

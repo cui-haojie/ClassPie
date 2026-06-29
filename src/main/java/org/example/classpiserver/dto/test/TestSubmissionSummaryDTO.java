@@ -1,16 +1,39 @@
-package org.example.classpiserver.entity;
+package org.example.classpiserver.dto.test;
 
-public class TestSubmission {
-    private Long id;
-    private Long activity_id;
+public class TestSubmissionSummaryDTO {
+    private Long submission_id;
     private String account;
-    private String submit_time;
     private String account_name;
     private Integer auto_score;
     private Integer manual_score;
     private Integer total_score;
     private Integer max_score;
     private Boolean is_fully_graded;
+    private String submit_time;
+
+    public Long getSubmission_id() {
+        return submission_id;
+    }
+
+    public void setSubmission_id(Long submission_id) {
+        this.submission_id = submission_id;
+    }
+
+    public String getAccount() {
+        return account;
+    }
+
+    public void setAccount(String account) {
+        this.account = account;
+    }
+
+    public String getAccount_name() {
+        return account_name;
+    }
+
+    public void setAccount_name(String account_name) {
+        this.account_name = account_name;
+    }
 
     public Integer getAuto_score() {
         return auto_score;
@@ -52,43 +75,11 @@ public class TestSubmission {
         this.is_fully_graded = is_fully_graded;
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Long getActivity_id() {
-        return activity_id;
-    }
-
-    public void setActivity_id(Long activity_id) {
-        this.activity_id = activity_id;
-    }
-
-    public String getAccount() {
-        return account;
-    }
-
-    public void setAccount(String account) {
-        this.account = account;
-    }
-
     public String getSubmit_time() {
         return submit_time;
     }
 
     public void setSubmit_time(String submit_time) {
         this.submit_time = submit_time;
-    }
-
-    public String getAccount_name() {
-        return account_name;
-    }
-
-    public void setAccount_name(String account_name) {
-        this.account_name = account_name;
     }
 }

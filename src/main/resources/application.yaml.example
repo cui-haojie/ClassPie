@@ -20,3 +20,11 @@ springdoc:
     enabled: true
   swagger-ui:
     enabled: true
+
+classpi:
+  ai:
+    enabled: false
+    api-key: ${AI_API_KEY:}
+    base-url: https://api.openai.com/v1
+    model: gpt-4o-mini
+    timeout-seconds: 60

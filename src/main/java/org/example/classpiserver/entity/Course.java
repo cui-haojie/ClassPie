@@ -4,6 +4,8 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
+
 @Data
 @Getter
 @Setter
@@ -18,6 +20,15 @@ private Integer school_class_id;
 private String semester;
 private Boolean is_archived;
 private Boolean is_pinned;
+private List<Integer> school_class_ids;
+
+    public List<Integer> getSchool_class_ids() {
+        return school_class_ids;
+    }
+
+    public void setSchool_class_ids(List<Integer> school_class_ids) {
+        this.school_class_ids = school_class_ids;
+    }
 
     public String getClass_name() {
         return class_name;

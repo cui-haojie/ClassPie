@@ -17,6 +17,24 @@ public class CourseActivity {
     private int choice_count;
     private int short_count;
     private String publish_status;
+    private String interaction_kind;
+    private String interaction_options;
+
+    public String getInteraction_kind() {
+        return interaction_kind;
+    }
+
+    public void setInteraction_kind(String interaction_kind) {
+        this.interaction_kind = interaction_kind;
+    }
+
+    public String getInteraction_options() {
+        return interaction_options;
+    }
+
+    public void setInteraction_options(String interaction_options) {
+        this.interaction_options = interaction_options;
+    }
 
     public String getPublish_status() {
         return publish_status;

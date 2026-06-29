@@ -24,3 +24,12 @@ springdoc:
     enabled: true
   swagger-ui:
     enabled: true
+
+# AI 辅助（OpenAI 兼容接口，如 OpenAI / DeepSeek / 通义等）
+classpi:
+  ai:
+    enabled: false
+    api-key: ${AI_API_KEY:}
+    base-url: https://api.openai.com/v1
+    model: gpt-4o-mini
+    timeout-seconds: 60

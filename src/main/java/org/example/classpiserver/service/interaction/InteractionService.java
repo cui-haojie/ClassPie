@@ -15,4 +15,6 @@ public interface InteractionService {
     boolean askInteractionQuestion(AskInteractionQuestionRequest request);
     PickRandomStudentResult pickRandomStudent(PickRandomStudentRequest request);
     boolean closeInteraction(CloseInteractionRequest request);
+    boolean startRace(org.example.classpiserver.dto.interaction.StartRaceRequest request);
+    boolean deleteInteraction(org.example.classpiserver.dto.activity.ActivityIdRequest request);
 }

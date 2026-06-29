@@ -19,6 +19,12 @@ public class InteractionDetailDTO {
     private List<QaAnswerItemDTO> answers;
     private List<PickItemDTO> picks;
     private PickItemDTO latest_pick;
+    private String interaction_kind;
+    private java.util.List<String> vote_options;
+    private java.util.List<VoteStatDTO> vote_stats;
+    private Integer my_option_index;
+    private Boolean race_open;
+    private java.util.List<QaAnswerItemDTO> race_results;
 
     public CourseActivity getActivity() {
         return activity;
@@ -131,4 +137,17 @@ public class InteractionDetailDTO {
     public void setLatest_pick(PickItemDTO latest_pick) {
         this.latest_pick = latest_pick;
     }
+
+    public String getInteraction_kind() { return interaction_kind; }
+    public void setInteraction_kind(String interaction_kind) { this.interaction_kind = interaction_kind; }
+    public java.util.List<String> getVote_options() { return vote_options; }
+    public void setVote_options(java.util.List<String> vote_options) { this.vote_options = vote_options; }
+    public java.util.List<VoteStatDTO> getVote_stats() { return vote_stats; }
+    public void setVote_stats(java.util.List<VoteStatDTO> vote_stats) { this.vote_stats = vote_stats; }
+    public Integer getMy_option_index() { return my_option_index; }
+    public void setMy_option_index(Integer my_option_index) { this.my_option_index = my_option_index; }
+    public Boolean getRace_open() { return race_open; }
+    public void setRace_open(Boolean race_open) { this.race_open = race_open; }
+    public java.util.List<QaAnswerItemDTO> getRace_results() { return race_results; }
+    public void setRace_results(java.util.List<QaAnswerItemDTO> race_results) { this.race_results = race_results; }
 }

@@ -38,4 +38,13 @@ public interface InteractionMapper {
 
     @Select("select account from course_interaction_pick where activity_id = #{activity_id}")
     List<String> getPickedAccountsByActivityId(@Param("activity_id") Long activity_id);
+
+    @Select("select count(*) from course_interaction_response where activity_id = #{activity_id} and round_num = 1 and option_index = #{option_index}")
+    Integer countVotesByOption(@Param("activity_id") Long activity_id, @Param("option_index") Integer option_index);
+
+    @Select("select count(*) from course_interaction_response where activity_id = #{activity_id} and account = #{account} and round_num = 1")
+    Integer countVoteByAccount(@Param("activity_id") Long activity_id, @Param("account") String account);
+
+    @Select("select count(*) from course_interaction_response where activity_id = #{activity_id} and account = #{account} and round_num = #{round_num}")
+    Integer countRaceByAccountAndRound(@Param("activity_id") Long activity_id, @Param("account") String account, @Param("round_num") Integer round_num);
 }

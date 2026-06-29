@@ -1,9 +1,12 @@
 package org.example.classpiserver.service.account;
 
+import org.example.classpiserver.dto.account.LoginResponse;
 import org.example.classpiserver.dto.account.RegisterRequest;
 import org.example.classpiserver.entity.Accounts;
 import org.example.classpiserver.mapper.account.AccountMapper;
 import org.example.classpiserver.mapper.schoolclass.SchoolClassMapper;
+import org.example.classpiserver.security.JwtService;
+import org.example.classpiserver.security.PasswordService;
 import org.example.classpiserver.support.EnrollmentSupport;
 import org.example.classpiserver.util.FileStorageService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +32,12 @@ public class AccountServiceImpl implements AccountService {
     @Autowired
     private EnrollmentSupport enrollmentSupport;
 
+    @Autowired
+    private PasswordService passwordService;
+
+    @Autowired
+    private JwtService jwtService;
+
     @Override
     public boolean addAccount(Accounts account) {
         if (account.getEmail_or_phone() == null || account.getEmail_or_phone().isBlank()) {
@@ -37,7 +46,7 @@ public class AccountServiceImpl implements AccountService {
         if (account.getStatus_number() == null || account.getStatus_number().isBlank()) {
             account.setStatus_number("12857");
         }
-        account.setPassword(enrollmentSupport.encryptPassword(account.getPassword()));
+        account.setPassword(passwordService.hash(account.getPassword()));
         if (accountMapper.selectAccountByAccount(account.getAccount()) != null) {
             return false;
         }
@@ -78,12 +87,25 @@ public class AccountServiceImpl implements AccountService {
         if (!enrollmentSupport.isValidPassword(password)) {
             throw new IllegalArgumentException("密码长度至少8位，包含字母和数字");
         }
-        return accountMapper.changePassword(password, account);
+        return accountMapper.changePassword(passwordService.hash(password), account);
     }
 
     @Override
-    public Accounts login(String account, String password) {
-        return accountMapper.selectAccount(account, password);
+    public LoginResponse login(String account, String password) {
+        Accounts existing = accountMapper.getAccount(account);
+        if (existing == null || !passwordService.matches(password, existing.getPassword())) {
+            return null;
+        }
+        if (!passwordService.isBcryptHash(existing.getPassword())) {
+            accountMapper.changePassword(passwordService.hash(password), account);
+        }
+        LoginResponse response = new LoginResponse();
+        response.setAccount(existing.getAccount());
+        response.setName(existing.getName());
+        response.setStatus(existing.getStatus());
+        response.setAvatar_url(existing.getAvatar_url());
+        response.setToken(jwtService.createToken(existing.getAccount()));
+        return response;
     }
 
     @Override

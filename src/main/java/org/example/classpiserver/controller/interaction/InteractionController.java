@@ -48,4 +48,14 @@ public class InteractionController {
     public boolean closeInteraction(@RequestBody CloseInteractionRequest request) {
         return interactionService.closeInteraction(request);
     }
+
+    @PostMapping("/startRace")
+    public boolean startRace(@RequestBody org.example.classpiserver.dto.interaction.StartRaceRequest request) {
+        return interactionService.startRace(request);
+    }
+
+    @PostMapping("/deleteInteraction")
+    public boolean deleteInteraction(@RequestBody org.example.classpiserver.dto.activity.ActivityIdRequest request) {
+        return interactionService.deleteInteraction(request);
+    }
 }

@@ -2,6 +2,7 @@ package org.example.classpiserver.support;
 
 import org.example.classpiserver.mapper.course.CourseMapper;
 import org.example.classpiserver.mapper.schoolclass.SchoolClassMapper;
+import org.example.classpiserver.security.PasswordService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -18,6 +19,9 @@ public class EnrollmentSupport {
 
     @Autowired
     private SchoolClassMapper schoolClassMapper;
+
+    @Autowired
+    private PasswordService passwordService;
 
     public void enrollAccountIfAbsent(String account, Long courseId) {
         Integer count = courseMapper.countAccountInCourse(account, courseId);
@@ -92,7 +96,7 @@ public class EnrollmentSupport {
     }
 
     public String encryptPassword(String password) {
-        return password;
+        return passwordService.hash(password);
     }
 
     public boolean isValidPassword(String password) {

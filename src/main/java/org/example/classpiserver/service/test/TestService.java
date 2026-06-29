@@ -12,4 +12,5 @@ public interface TestService {
     TestDetailDTO getTestDetail(Long activityId, String account);
     boolean submitTest(SubmitTestRequest request);
     boolean gradeTestAnswer(GradeTestAnswerRequest request);
+    boolean deleteTest(Long activityId, String teacherAccount);
 }

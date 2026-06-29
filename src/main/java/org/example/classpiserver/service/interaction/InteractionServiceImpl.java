@@ -2,6 +2,7 @@ package org.example.classpiserver.service.interaction;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.example.classpiserver.dto.activity.ActivityIdRequest;
 import org.example.classpiserver.dto.interaction.AddCourseInteractionRequest;
 import org.example.classpiserver.dto.interaction.AskInteractionQuestionRequest;
 import org.example.classpiserver.dto.interaction.CloseInteractionRequest;
@@ -10,11 +11,14 @@ import org.example.classpiserver.dto.interaction.PickItemDTO;
 import org.example.classpiserver.dto.interaction.PickRandomStudentRequest;
 import org.example.classpiserver.dto.interaction.PickRandomStudentResult;
 import org.example.classpiserver.dto.interaction.QaAnswerItemDTO;
+import org.example.classpiserver.dto.interaction.StartRaceRequest;
 import org.example.classpiserver.dto.interaction.SubmitInteractionRequest;
+import org.example.classpiserver.dto.interaction.VoteStatDTO;
 import org.example.classpiserver.entity.CourseActivity;
 import org.example.classpiserver.entity.CourseMember;
 import org.example.classpiserver.entity.InteractionPick;
 import org.example.classpiserver.entity.InteractionResponse;
+import org.example.classpiserver.live.LiveEventPublisher;
 import org.example.classpiserver.mapper.account.AccountMapper;
 import org.example.classpiserver.mapper.activity.ActivityMapper;
 import org.example.classpiserver.mapper.course.CourseMapper;
@@ -52,6 +56,9 @@ public class InteractionServiceImpl implements InteractionService {
     @Autowired
     private NotificationService notificationService;
 
+    @Autowired
+    private LiveEventPublisher liveEventPublisher;
+
     @Override
     public boolean addCourseInteraction(AddCourseInteractionRequest request) {
         if (request == null || request.getClass_id() == null || request.getTitle() == null || request.getTitle().isBlank()) {
@@ -67,9 +74,23 @@ public class InteractionServiceImpl implements InteractionService {
         activity.setContent(trimOrNull(request.getContent()));
         activity.setCreator_account(request.getCreator_account());
         activity.setPublish_status("published");
-        activity.setInteraction_kind("qa");
+        String kind = request.getInteraction_kind();
+        if (kind == null || kind.isBlank()) {
+            kind = "qa";
+        }
+        activity.setInteraction_kind(kind);
         try {
-            activity.setInteraction_options(JSON.writeValueAsString(Map.of("status", "active", "round", 1)));
+            java.util.Map<String, Object> options = new java.util.LinkedHashMap<>();
+            options.put("status", "active");
+            options.put("round", 1);
+            options.put("race_round", 1);
+            options.put("race_open", false);
+            if ("vote".equals(kind) && request.getOptions() != null && !request.getOptions().isEmpty()) {
+                options.put("vote_options", request.getOptions());
+            } else if ("vote".equals(kind)) {
+                options.put("vote_options", java.util.List.of("赞成", "反对"));
+            }
+            activity.setInteraction_options(JSON.writeValueAsString(options));
         } catch (Exception ex) {
             return false;
         }
@@ -141,6 +162,33 @@ public class InteractionServiceImpl implements InteractionService {
         }
         dto.setPicks(picks);
         dto.setLatest_pick(latestPick);
+        dto.setInteraction_kind(activity.getInteraction_kind());
+        if ("vote".equals(activity.getInteraction_kind())) {
+            dto.setVote_options(meta.voteOptions);
+            dto.setVote_stats(buildVoteStats(activityId, meta.voteOptions));
+            if (account != null) {
+                InteractionResponse vote = interactionMapper.getInteractionResponseByAccountAndRound(activityId, account, 1);
+                if (vote != null) {
+                    dto.setMy_option_index(vote.getOption_index());
+                    dto.setParticipated(true);
+                }
+            }
+        }
+        if ("race".equals(activity.getInteraction_kind())) {
+            dto.setRace_open(meta.raceOpen);
+            List<InteractionResponse> raceRows = interactionMapper.getInteractionResponsesByRound(activityId, meta.raceRound);
+            List<QaAnswerItemDTO> raceResults = new ArrayList<>();
+            for (InteractionResponse row : raceRows) {
+                QaAnswerItemDTO item = new QaAnswerItemDTO();
+                item.setAccount(row.getAccount());
+                item.setAccount_name(row.getAccount_name());
+                if (row.getCreate_time() != null) {
+                    item.setCreate_time(HomeworkDeadlineUtil.formatDisplay(row.getCreate_time()));
+                }
+                raceResults.add(item);
+            }
+            dto.setRace_results(raceResults);
+        }
         return dto;
     }
 
@@ -161,6 +209,13 @@ public class InteractionServiceImpl implements InteractionService {
         if (!"active".equals(meta.status)) {
             return false;
         }
+        String kind = activity.getInteraction_kind() == null ? "qa" : activity.getInteraction_kind();
+        if ("vote".equals(kind)) {
+            return submitVote(request, request.getActivity_id(), meta);
+        }
+        if ("race".equals(kind)) {
+            return submitRace(request, request.getActivity_id(), meta);
+        }
         String text = request.getContent() == null ? "" : request.getContent().trim();
         if (text.isBlank()) {
             return false;
@@ -175,7 +230,100 @@ public class InteractionServiceImpl implements InteractionService {
         response.setAccount(request.getAccount());
         response.setContent(text);
         response.setRound_num(meta.round);
-        return interactionMapper.addInteractionResponse(response);
+        boolean ok = interactionMapper.addInteractionResponse(response);
+        if (ok) {
+            liveEventPublisher.publishInteraction(request.getActivity_id(), "interaction_updated", null);
+        }
+        return ok;
+    }
+
+    private boolean submitVote(SubmitInteractionRequest request, Long activityId, InteractionMeta meta) {
+        if (request.getOption_index() == null || meta.voteOptions == null || meta.voteOptions.isEmpty()) {
+            return false;
+        }
+        if (request.getOption_index() < 0 || request.getOption_index() >= meta.voteOptions.size()) {
+            return false;
+        }
+        Integer existing = interactionMapper.countVoteByAccount(activityId, request.getAccount());
+        if (existing != null && existing > 0) {
+            return false;
+        }
+        InteractionResponse response = new InteractionResponse();
+        response.setActivity_id(activityId);
+        response.setAccount(request.getAccount());
+        response.setOption_index(request.getOption_index());
+        response.setContent(meta.voteOptions.get(request.getOption_index()));
+        response.setRound_num(1);
+        boolean ok = interactionMapper.addInteractionResponse(response);
+        if (ok) {
+            liveEventPublisher.publishInteraction(activityId, "interaction_updated", null);
+        }
+        return ok;
+    }
+
+    private boolean submitRace(SubmitInteractionRequest request, Long activityId, InteractionMeta meta) {
+        if (!meta.raceOpen) {
+            return false;
+        }
+        Integer existing = interactionMapper.countRaceByAccountAndRound(activityId, request.getAccount(), meta.raceRound);
+        if (existing != null && existing > 0) {
+            return false;
+        }
+        InteractionResponse response = new InteractionResponse();
+        response.setActivity_id(activityId);
+        response.setAccount(request.getAccount());
+        response.setContent("抢答");
+        response.setRound_num(meta.raceRound);
+        boolean ok = interactionMapper.addInteractionResponse(response);
+        if (ok) {
+            liveEventPublisher.publishInteraction(activityId, "interaction_updated", null);
+        }
+        return ok;
+    }
+
+    @Override
+    public boolean startRace(StartRaceRequest request) {
+        if (request == null || request.getActivity_id() == null) {
+            return false;
+        }
+        if (!"老师".equals(accountMapper.getAccountStatus(request.getTeacher_account()))) {
+            return false;
+        }
+        CourseActivity activity = activityMapper.getCourseActivityById(request.getActivity_id());
+        if (activity == null || !"interaction".equals(activity.getType()) || !"race".equals(activity.getInteraction_kind())) {
+            return false;
+        }
+        InteractionMeta meta = parseInteractionMeta(activity.getInteraction_options());
+        if (!"active".equals(meta.status)) {
+            return false;
+        }
+        meta.raceRound = meta.raceRound + 1;
+        meta.raceOpen = true;
+        try {
+            java.util.Map<String, Object> options = buildOptionsMap(meta);
+            boolean ok = activityMapper.updateCourseInteractionState(activity.getId(), activity.getContent(), JSON.writeValueAsString(options));
+            if (ok) {
+                liveEventPublisher.publishInteraction(activity.getId(), "race_started", java.util.Map.of("race_round", meta.raceRound));
+            }
+            return ok;
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean deleteInteraction(ActivityIdRequest request) {
+        if (request == null || request.getActivity_id() == null || request.getTeacher_account() == null) {
+            return false;
+        }
+        CourseActivity activity = activityMapper.getCourseActivityById(request.getActivity_id());
+        if (activity == null || !"interaction".equals(activity.getType())) {
+            return false;
+        }
+        if (!request.getTeacher_account().equals(activity.getCreator_account())) {
+            return false;
+        }
+        return activityMapper.deleteActivityById(request.getActivity_id());
     }
 
     @Override
@@ -200,8 +348,12 @@ public class InteractionServiceImpl implements InteractionService {
         int targetRound = hasCurrentQuestion ? meta.round + 1 : meta.round;
         meta.round = targetRound;
         try {
-            String optionsJson = JSON.writeValueAsString(Map.of("status", meta.status, "round", targetRound));
-            return activityMapper.updateCourseInteractionState(activity.getId(), question, optionsJson);
+            String optionsJson = JSON.writeValueAsString(buildOptionsMap(meta));
+            boolean ok = activityMapper.updateCourseInteractionState(activity.getId(), question, optionsJson);
+            if (ok) {
+                liveEventPublisher.publishInteraction(activity.getId(), "interaction_updated", null);
+            }
+            return ok;
         } catch (Exception ex) {
             return false;
         }
@@ -268,9 +420,14 @@ public class InteractionServiceImpl implements InteractionService {
         }
         InteractionMeta meta = parseInteractionMeta(activity.getInteraction_options());
         meta.status = "closed";
+        meta.raceOpen = false;
         try {
-            String optionsJson = JSON.writeValueAsString(Map.of("status", meta.status, "round", meta.round));
-            return activityMapper.updateCourseInteractionState(activity.getId(), activity.getContent(), optionsJson);
+            String optionsJson = JSON.writeValueAsString(buildOptionsMap(meta));
+            boolean ok = activityMapper.updateCourseInteractionState(activity.getId(), activity.getContent(), optionsJson);
+            if (ok) {
+                liveEventPublisher.publishInteraction(activity.getId(), "interaction_closed", null);
+            }
+            return ok;
         } catch (Exception ex) {
             return false;
         }
@@ -290,6 +447,9 @@ public class InteractionServiceImpl implements InteractionService {
         InteractionMeta meta = new InteractionMeta();
         meta.status = "active";
         meta.round = 1;
+        meta.raceRound = 1;
+        meta.raceOpen = false;
+        meta.voteOptions = new ArrayList<>();
         if (json == null || json.isBlank()) {
             return meta;
         }
@@ -305,14 +465,72 @@ public class InteractionServiceImpl implements InteractionService {
             } else if (round != null) {
                 meta.round = Integer.parseInt(String.valueOf(round));
             }
+            Object raceRound = map.get("race_round");
+            if (raceRound instanceof Number rr) {
+                meta.raceRound = rr.intValue();
+            } else if (raceRound != null) {
+                meta.raceRound = Integer.parseInt(String.valueOf(raceRound));
+            }
+            Object raceOpen = map.get("race_open");
+            if (raceOpen instanceof Boolean b) {
+                meta.raceOpen = b;
+            } else if (raceOpen != null) {
+                meta.raceOpen = Boolean.parseBoolean(String.valueOf(raceOpen));
+            }
+            Object voteOptions = map.get("vote_options");
+            if (voteOptions instanceof List<?> list) {
+                for (Object item : list) {
+                    if (item != null) {
+                        meta.voteOptions.add(String.valueOf(item));
+                    }
+                }
+            }
         } catch (Exception ignored) {
         }
         return meta;
     }
 
+    private java.util.Map<String, Object> buildOptionsMap(InteractionMeta meta) {
+        java.util.Map<String, Object> options = new java.util.LinkedHashMap<>();
+        options.put("status", meta.status);
+        options.put("round", meta.round);
+        options.put("race_round", meta.raceRound);
+        options.put("race_open", meta.raceOpen);
+        if (meta.voteOptions != null && !meta.voteOptions.isEmpty()) {
+            options.put("vote_options", meta.voteOptions);
+        }
+        return options;
+    }
+
+    private List<VoteStatDTO> buildVoteStats(Long activityId, List<String> voteOptions) {
+        List<VoteStatDTO> stats = new ArrayList<>();
+        if (voteOptions == null || voteOptions.isEmpty()) {
+            return stats;
+        }
+        int total = 0;
+        int[] counts = new int[voteOptions.size()];
+        for (int i = 0; i < voteOptions.size(); i++) {
+            Integer count = interactionMapper.countVotesByOption(activityId, i);
+            counts[i] = count == null ? 0 : count;
+            total += counts[i];
+        }
+        for (int i = 0; i < voteOptions.size(); i++) {
+            VoteStatDTO stat = new VoteStatDTO();
+            stat.setIndex(i);
+            stat.setLabel(voteOptions.get(i));
+            stat.setCount(counts[i]);
+            stat.setPercent(total == 0 ? 0 : (int) Math.round(counts[i] * 100.0 / total));
+            stats.add(stat);
+        }
+        return stats;
+    }
+
     private static class InteractionMeta {
         private String status;
         private int round;
+        private int raceRound;
+        private boolean raceOpen;
+        private List<String> voteOptions;
     }
 
     private void normalizeActivityTimes(CourseActivity activity) {

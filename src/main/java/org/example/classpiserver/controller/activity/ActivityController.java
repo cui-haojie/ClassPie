@@ -78,4 +78,9 @@ public class ActivityController {
         request.setContent(content);
         return activityService.addActivityReply(request, file);
     }
+
+    @PostMapping("/deleteActivity")
+    public boolean deleteActivity(@RequestBody ActivityIdRequest request) {
+        return activityService.deleteActivity(request.getActivity_id(), request.getTeacher_account());
+    }
 }

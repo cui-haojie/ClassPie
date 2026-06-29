@@ -155,7 +155,7 @@ public class TestServiceImpl implements TestService {
         } catch (IllegalArgumentException ex) {
             return false;
         }
-        notificationService.notifyTestPublished(request.getClass_id(), request.getTitle().trim());
+        notificationService.notifyTestPublished(request.getClass_id(), activityId, request.getTitle().trim());
         return true;
     }
 
@@ -472,6 +472,22 @@ public class TestServiceImpl implements TestService {
         int auto = submission.getAuto_score() == null ? 0 : submission.getAuto_score();
         int total = auto + manual;
         testMapper.updateTestSubmissionScores(submissionId, manual, total, allShortGraded ? 1 : 0);
+    }
+
+    @Override
+    public boolean deleteTest(Long activityId, String teacherAccount) {
+        if (activityId == null || teacherAccount == null) {
+            return false;
+        }
+        CourseActivity activity = activityMapper.getCourseActivityById(activityId);
+        if (activity == null || !"test".equals(activity.getType())) {
+            return false;
+        }
+        if (!teacherAccount.equals(activity.getCreator_account())) {
+            return false;
+        }
+        testMapper.deleteTestQuestionsByActivityId(activityId);
+        return activityMapper.deleteActivityById(activityId);
     }
 
     private void normalizeActivityTimes(CourseActivity activity) {

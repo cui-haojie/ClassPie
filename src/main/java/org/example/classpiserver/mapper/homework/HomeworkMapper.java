@@ -60,4 +60,10 @@ public interface HomeworkMapper {
 
     @Select("SELECT COUNT(*) FROM account_course ac INNER JOIN accounts a ON ac.account = a.account WHERE ac.class_id = #{classId} AND ac.is_archived = 0 AND a.status = '学生'")
     Integer countStudentMembersByClass(@Param("classId") Long classId);
+
+    @Delete("delete from courses_homework where class_id = #{class_id} and homework_id = #{homework_id}")
+    boolean deleteCourseHomeworkLink(@Param("class_id") Integer class_id, @Param("homework_id") Integer homework_id);
+
+    @Delete("delete from homework where homework_id = #{homework_id}")
+    boolean deleteHomeworkById(@Param("homework_id") Integer homework_id);
 }

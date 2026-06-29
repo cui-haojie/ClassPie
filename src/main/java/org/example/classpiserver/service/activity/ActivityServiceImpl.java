@@ -106,8 +106,15 @@ public class ActivityServiceImpl implements ActivityService {
             }
         }
         boolean ok = activityMapper.addCourseActivity(activity);
-        if (ok && "announcement".equals(activity.getType())) {
-            notificationService.notifyAnnouncementPublished(classId, activity.getTitle());
+        if (ok) {
+            Long activityId = activity.getId();
+            if ("announcement".equals(activity.getType())) {
+                notificationService.notifyAnnouncementPublished(classId, activityId, activity.getTitle());
+            } else if ("topic".equals(activity.getType())) {
+                notificationService.notifyTopicPublished(classId, activityId, activity.getTitle());
+            } else if ("material".equals(activity.getType())) {
+                notificationService.notifyMaterialPublished(classId, activityId, activity.getTitle());
+            }
         }
         return ok;
     }
@@ -168,6 +175,21 @@ public class ActivityServiceImpl implements ActivityService {
             }
         }
         return activityMapper.addActivityReply(reply);
+    }
+
+    @Override
+    public boolean deleteActivity(Long activityId, String teacherAccount) {
+        if (activityId == null || teacherAccount == null) {
+            return false;
+        }
+        CourseActivity activity = activityMapper.getCourseActivityById(activityId);
+        if (activity == null || "test".equals(activity.getType()) || "interaction".equals(activity.getType())) {
+            return false;
+        }
+        if (!teacherAccount.equals(activity.getCreator_account())) {
+            return false;
+        }
+        return activityMapper.deleteActivityById(activityId);
     }
 
     private void normalizeActivityTimes(CourseActivity activity) {

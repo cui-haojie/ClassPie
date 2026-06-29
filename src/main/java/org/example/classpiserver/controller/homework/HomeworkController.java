@@ -81,4 +81,9 @@ public class HomeworkController {
     public boolean remindHomework(@RequestBody RemindHomeworkRequest request) {
         return homeworkService.remindHomework(request);
     }
+
+    @PostMapping("/deleteHomework")
+    public boolean deleteHomework(@RequestBody RemindHomeworkRequest request) {
+        return homeworkService.deleteHomework(request.getClass_id(), request.getHomework_id(), request.getTeacher_account());
+    }
 }

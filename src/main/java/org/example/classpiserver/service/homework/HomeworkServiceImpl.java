@@ -3,6 +3,7 @@ package org.example.classpiserver.service.homework;
 import org.example.classpiserver.dto.homework.RemindHomeworkRequest;
 import org.example.classpiserver.entity.Content;
 import org.example.classpiserver.entity.Homework;
+import org.example.classpiserver.mapper.course.CourseMapper;
 import org.example.classpiserver.mapper.homework.HomeworkMapper;
 import org.example.classpiserver.service.notification.NotificationService;
 import org.example.classpiserver.util.FileStorageService;
@@ -22,6 +23,9 @@ public class HomeworkServiceImpl implements HomeworkService {
 
     @Autowired
     private HomeworkMapper homeworkMapper;
+
+    @Autowired
+    private CourseMapper courseMapper;
 
     @Autowired
     private FileStorageService fileStorageService;
@@ -157,6 +161,19 @@ public class HomeworkServiceImpl implements HomeworkService {
             );
         }
         return true;
+    }
+
+    @Override
+    public boolean deleteHomework(Integer classId, Integer homeworkId, String teacherAccount) {
+        if (classId == null || homeworkId == null || teacherAccount == null) {
+            return false;
+        }
+        var course = courseMapper.getCourseByCourseId(classId.longValue());
+        if (course == null || !teacherAccount.equals(course.getTeacher_account())) {
+            return false;
+        }
+        homeworkMapper.deleteCourseHomeworkLink(classId, homeworkId);
+        return homeworkMapper.deleteHomeworkById(homeworkId);
     }
 
     private void fillHomeworkSubmissionStats(Homework homework, Long classId) {

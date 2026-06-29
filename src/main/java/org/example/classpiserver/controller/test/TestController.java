@@ -45,4 +45,9 @@ public class TestController {
     public boolean gradeTestAnswer(@RequestBody GradeTestAnswerRequest request) {
         return testService.gradeTestAnswer(request);
     }
+
+    @PostMapping("/deleteTest")
+    public boolean deleteTest(@RequestBody org.example.classpiserver.dto.activity.ActivityIdRequest request) {
+        return testService.deleteTest(request.getActivity_id(), request.getTeacher_account());
+    }
 }

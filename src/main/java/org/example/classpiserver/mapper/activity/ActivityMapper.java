@@ -77,4 +77,7 @@ public interface ActivityMapper {
     @Update("update course_activity set content = #{content}, interaction_options = #{interaction_options} where id = #{id}")
     boolean updateCourseInteractionState(@Param("id") Long id, @Param("content") String content,
                                          @Param("interaction_options") String interaction_options);
+
+    @Delete("delete from course_activity where id = #{id}")
+    boolean deleteActivityById(@Param("id") Long id);
 }

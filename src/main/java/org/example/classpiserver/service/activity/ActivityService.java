@@ -14,4 +14,5 @@ public interface ActivityService {
     CourseActivity getCourseActivityById(Long activityId);
     List<CourseActivityReply> getActivityReplies(Long activityId);
     boolean addActivityReply(AddActivityReplyRequest request, MultipartFile image);
+    boolean deleteActivity(Long activityId, String teacherAccount);
 }

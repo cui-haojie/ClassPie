@@ -49,19 +49,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public void notifyHomeworkPublished(Integer classId, Integer homeworkId, String homeworkName) {
-        List<CourseMember> members = courseMapper.getCourseMembers(classId.longValue());
-        for (CourseMember member : members) {
-            if ("老师".equals(member.getStatus())) {
-                continue;
-            }
-            Notification notification = new Notification();
-            notification.setAccount(member.getAccount());
-            notification.setClass_id(classId);
-            notification.setHomework_id(homeworkId);
-            notification.setType("homework");
-            notification.setMessage("新作业发布：" + homeworkName);
-            notificationMapper.addNotification(notification);
-        }
+        notifyStudents(classId, homeworkId, "homework", "新作业发布：" + homeworkName);
     }
 
     @Override
@@ -76,52 +64,33 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public void notifyAnnouncementPublished(Integer classId, String title) {
-        List<CourseMember> members = courseMapper.getCourseMembers(classId.longValue());
-        for (CourseMember member : members) {
-            if ("老师".equals(member.getStatus())) {
-                continue;
-            }
-            Notification notification = new Notification();
-            notification.setAccount(member.getAccount());
-            notification.setClass_id(classId);
-            notification.setType("announcement");
-            notification.setMessage("新公告：" + title);
-            notificationMapper.addNotification(notification);
-        }
+    public void notifyAnnouncementPublished(Integer classId, Long activityId, String title) {
+        notifyStudents(classId, toRefId(activityId), "announcement", "新公告：" + title);
     }
 
     @Override
-    public void notifyTestPublished(Integer classId, String title) {
-        List<CourseMember> members = courseMapper.getCourseMembers(classId.longValue());
-        for (CourseMember member : members) {
-            if ("老师".equals(member.getStatus())) {
-                continue;
-            }
-            Notification notification = new Notification();
-            notification.setAccount(member.getAccount());
-            notification.setClass_id(classId);
-            notification.setType("test");
-            notification.setMessage("新测试发布：" + title);
-            notificationMapper.addNotification(notification);
-        }
+    public void notifyTopicPublished(Integer classId, Long activityId, String title) {
+        notifyStudents(classId, toRefId(activityId), "topic", "新话题：" + title);
+    }
+
+    @Override
+    public void notifyMaterialPublished(Integer classId, Long activityId, String title) {
+        notifyStudents(classId, toRefId(activityId), "material", "新资料：" + title);
+    }
+
+    @Override
+    public void notifyTestPublished(Integer classId, Long activityId, String title) {
+        notifyStudents(classId, toRefId(activityId), "test", "新测试发布：" + title);
     }
 
     @Override
     public void notifyInteractionPublished(Integer classId, Long activityId, String title) {
-        List<CourseMember> members = courseMapper.getCourseMembers(classId.longValue());
-        for (CourseMember member : members) {
-            if ("老师".equals(member.getStatus())) {
-                continue;
-            }
-            Notification notification = new Notification();
-            notification.setAccount(member.getAccount());
-            notification.setClass_id(classId);
-            notification.setHomework_id(activityId == null ? null : activityId.intValue());
-            notification.setType("interaction");
-            notification.setMessage("课堂互动开始：" + title);
-            notificationMapper.addNotification(notification);
-        }
+        notifyStudents(classId, toRefId(activityId), "interaction", "课堂互动开始：" + title);
+    }
+
+    @Override
+    public void notifyAttendanceStarted(Integer classId, Long sessionId) {
+        notifyStudents(classId, toRefId(sessionId), "attendance", "老师已发起签到，请尽快完成考勤");
     }
 
     @Override
@@ -133,5 +102,28 @@ public class NotificationServiceImpl implements NotificationService {
         notification.setType("interaction_pick");
         notification.setMessage("老师点名请你回答：" + activity.getTitle());
         notificationMapper.addNotification(notification);
+    }
+
+    private void notifyStudents(Integer classId, Integer refId, String type, String message) {
+        if (classId == null || type == null || message == null) {
+            return;
+        }
+        List<CourseMember> members = courseMapper.getCourseMembers(classId.longValue());
+        for (CourseMember member : members) {
+            if ("老师".equals(member.getStatus())) {
+                continue;
+            }
+            Notification notification = new Notification();
+            notification.setAccount(member.getAccount());
+            notification.setClass_id(classId);
+            notification.setHomework_id(refId);
+            notification.setType(type);
+            notification.setMessage(message);
+            notificationMapper.addNotification(notification);
+        }
+    }
+
+    private Integer toRefId(Long id) {
+        return id == null ? null : id.intValue();
     }
 }

@@ -17,4 +17,5 @@ public interface HomeworkService {
     boolean addContent(Content content);
     boolean submitHomework(Long contentId, String account, String details, MultipartFile file);
     boolean remindHomework(RemindHomeworkRequest request);
+    boolean deleteHomework(Integer classId, Integer homeworkId, String teacherAccount);
 }

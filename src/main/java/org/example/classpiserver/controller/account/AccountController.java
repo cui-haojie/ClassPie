@@ -1,5 +1,6 @@
 package org.example.classpiserver.controller.account;
 
+import org.example.classpiserver.dto.account.LoginResponse;
 import org.example.classpiserver.dto.account.AccountRequest;
 import org.example.classpiserver.dto.account.LoginRequest;
 import org.example.classpiserver.dto.account.RegisterRequest;
@@ -39,7 +40,7 @@ public class AccountController {
     }
 
     @PostMapping("/login")
-    public Accounts login(@RequestBody LoginRequest request) {
+    public LoginResponse login(@RequestBody LoginRequest request) {
         return accountService.login(request.getAccount(), request.getPassword());
     }
 

@@ -20,7 +20,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/editor/login",
                         "/editor/add",
                         "/editor/check",
-                        "/editor/change"
+                        "/editor/change",
+                        "/editor/listSchoolClasses"
                 );
     }
 }

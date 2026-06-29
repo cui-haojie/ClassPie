@@ -380,7 +380,8 @@ public class TestServiceImpl implements TestService {
                 continue;
             }
             String stem = input.getStem() == null ? "" : input.getStem().trim();
-            if (stem.isEmpty()) {
+            String imageUrl = input.getStem_image_url() == null ? null : input.getStem_image_url().trim();
+            if (stem.isEmpty() && (imageUrl == null || imageUrl.isEmpty())) {
                 if (strict) {
                     throw new IllegalArgumentException("题目信息不完整");
                 }
@@ -397,8 +398,10 @@ public class TestServiceImpl implements TestService {
             question.setActivity_id(activityId);
             question.setQuestion_type(qType);
             question.setStem(stem);
+            question.setStem_image_url(imageUrl == null || imageUrl.isEmpty() ? null : imageUrl);
             question.setSort_order(order++);
-            int score = input.getScore() == null || input.getScore() <= 0 ? 5 : input.getScore();
+            int defaultScore = "short".equals(qType) ? 10 : 5;
+            int score = input.getScore() == null || input.getScore() <= 0 ? defaultScore : input.getScore();
             question.setScore(score);
             if ("choice".equals(qType)) {
                 if (isBlank(input.getOption_a()) || isBlank(input.getOption_b())

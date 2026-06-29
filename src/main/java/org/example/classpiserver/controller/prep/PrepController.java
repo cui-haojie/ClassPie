@@ -6,12 +6,14 @@ import org.example.classpiserver.dto.prep.PrepItemDetailDTO;
 import org.example.classpiserver.dto.prep.PublishPrepRequest;
 import org.example.classpiserver.entity.TeacherPrepItem;
 import org.example.classpiserver.service.prep.PrepService;
+import org.example.classpiserver.util.FileStorageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/editor")
@@ -19,6 +21,15 @@ public class PrepController {
 
     @Autowired
     private PrepService prepService;
+
+    @Autowired
+    private FileStorageService fileStorageService;
+
+    @PostMapping(value = "/uploadTestQuestionImage", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Map<String, String> uploadTestQuestionImage(@RequestParam("file") MultipartFile file) throws Exception {
+        FileStorageService.StoredFile stored = fileStorageService.saveTestQuestionImage(file);
+        return Map.of("url", stored.url());
+    }
 
     @PostMapping("/listPrepItems")
     public List<TeacherPrepItem> listPrepItems(@RequestBody ListPrepRequest request) {

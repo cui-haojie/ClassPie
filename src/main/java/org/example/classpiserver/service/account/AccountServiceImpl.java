@@ -177,6 +177,18 @@ public class AccountServiceImpl implements AccountService {
         if (account.getStatus() != null) {
             existing.setStatus(account.getStatus());
         }
+        if (account.getDepartment() != null) {
+            existing.setDepartment(account.getDepartment().trim());
+        }
+        if (account.getMajor() != null) {
+            existing.setMajor(account.getMajor().trim());
+        }
+        if (account.getGrade_level() != null) {
+            existing.setGrade_level(account.getGrade_level().trim());
+        }
+        if (account.getEnrollment_date() != null) {
+            existing.setEnrollment_date(account.getEnrollment_date().trim());
+        }
         return accountMapper.updateAccount(existing);
     }
 }

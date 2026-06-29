@@ -28,7 +28,9 @@ public interface AccountMapper {
     @Select("select status from accounts where account = #{account}")
     String getAccountStatus(@Param("account") String account);
 
-    @Update("update accounts set name = #{name}, mechanism = #{mechanism}, email_or_phone = #{email_or_phone}, status_number = #{status_number}, status = #{status} where account = #{account}")
+    @Update("update accounts set name = #{name}, mechanism = #{mechanism}, email_or_phone = #{email_or_phone}, " +
+            "status_number = #{status_number}, status = #{status}, department = #{department}, major = #{major}, " +
+            "grade_level = #{grade_level}, enrollment_date = #{enrollment_date} where account = #{account}")
     boolean updateAccount(Accounts account);
 
     @Update("update accounts set avatar_url = #{avatar_url} where account = #{account}")

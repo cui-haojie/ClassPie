@@ -12,6 +12,7 @@ public class TeacherPrepTestQuestion {
     private String correct_option;
     private Integer score;
     private Integer sort_order;
+    private String stem_image_url;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -35,4 +36,6 @@ public class TeacherPrepTestQuestion {
     public void setScore(Integer score) { this.score = score; }
     public Integer getSort_order() { return sort_order; }
     public void setSort_order(Integer sort_order) { this.sort_order = sort_order; }
+    public String getStem_image_url() { return stem_image_url; }
+    public void setStem_image_url(String stem_image_url) { this.stem_image_url = stem_image_url; }
 }

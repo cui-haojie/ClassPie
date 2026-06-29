@@ -1,0 +1,15 @@
+{
+  "ui_login": "C:\\Users\\27823\\Desktop\\java\\ClassPiServer\\doc_assets\\screenshots\\ui_login.png",
+  "ui_register": "C:\\Users\\27823\\Desktop\\java\\ClassPiServer\\doc_assets\\screenshots\\ui_register.png",
+  "ui_main_teacher": "C:\\Users\\27823\\Desktop\\java\\ClassPiServer\\doc_assets\\screenshots\\ui_main_teacher.png",
+  "ui_course": "C:\\Users\\27823\\Desktop\\java\\ClassPiServer\\doc_assets\\screenshots\\ui_course_teacher.png",
+  "ui_course_interaction": "C:\\Users\\27823\\Desktop\\java\\ClassPiServer\\doc_assets\\screenshots\\ui_course.png",
+  "ui_live": "C:\\Users\\27823\\Desktop\\java\\ClassPiServer\\doc_assets\\screenshots\\ui_live.png",
+  "ui_prep": "C:\\Users\\27823\\Desktop\\java\\ClassPiServer\\doc_assets\\screenshots\\ui_prep.png",
+  "ui_setting": "C:\\Users\\27823\\Desktop\\java\\ClassPiServer\\doc_assets\\screenshots\\ui_setting.png",
+  "ui_grade": "C:\\Users\\27823\\Desktop\\java\\ClassPiServer\\doc_assets\\screenshots\\ui_grade.png",
+  "ui_homework_list": "C:\\Users\\27823\\Desktop\\java\\ClassPiServer\\doc_assets\\screenshots\\ui_homework.png",
+  "ui_interaction": "C:\\Users\\27823\\Desktop\\java\\ClassPiServer\\doc_assets\\screenshots\\ui_interaction.png",
+  "ui_main_student": "C:\\Users\\27823\\Desktop\\java\\ClassPiServer\\doc_assets\\screenshots\\ui_main_student.png",
+  "ui_course_student": "C:\\Users\\27823\\Desktop\\java\\ClassPiServer\\doc_assets\\screenshots\\ui_course_student.png"
+}

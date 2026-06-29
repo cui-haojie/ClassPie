@@ -240,6 +240,7 @@ public class PrepServiceImpl implements PrepService {
             input.setOption_d(q.getOption_d());
             input.setCorrect_option(q.getCorrect_option());
             input.setScore(q.getScore());
+            input.setStem_image_url(q.getStem_image_url());
             questions.add(input);
         }
         testRequest.setQuestions(questions);
@@ -258,19 +259,30 @@ public class PrepServiceImpl implements PrepService {
             }
             int order = 0;
             for (TestQuestionInput input : inputs) {
-                if (input == null || input.getStem() == null || input.getStem().isBlank()) {
+                if (input == null) {
+                    continue;
+                }
+                String stem = input.getStem() == null ? "" : input.getStem().trim();
+                String imageUrl = trimOrNull(input.getStem_image_url());
+                if (stem.isEmpty() && imageUrl == null) {
+                    continue;
+                }
+                String qType = input.getQuestion_type() == null ? "choice" : input.getQuestion_type().trim();
+                if (!"choice".equals(qType) && !"short".equals(qType)) {
                     continue;
                 }
                 TeacherPrepTestQuestion q = new TeacherPrepTestQuestion();
                 q.setPrep_item_id(prepItemId);
-                q.setQuestion_type(input.getQuestion_type() == null ? "choice" : input.getQuestion_type());
-                q.setStem(input.getStem().trim());
+                q.setQuestion_type(qType);
+                q.setStem(stem);
+                q.setStem_image_url(imageUrl);
                 q.setOption_a(input.getOption_a());
                 q.setOption_b(input.getOption_b());
                 q.setOption_c(input.getOption_c());
                 q.setOption_d(input.getOption_d());
                 q.setCorrect_option(input.getCorrect_option());
-                q.setScore(input.getScore() == null ? 5 : input.getScore());
+                int defaultScore = "short".equals(qType) ? 10 : 5;
+                q.setScore(input.getScore() == null || input.getScore() <= 0 ? defaultScore : input.getScore());
                 q.setSort_order(order++);
                 prepMapper.insertQuestion(q);
             }

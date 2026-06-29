@@ -418,7 +418,36 @@ public class InteractionServiceImpl implements InteractionService {
         if (activity == null || !"interaction".equals(activity.getType())) {
             return false;
         }
+        return closeInteractionInternal(activity);
+    }
+
+    @Override
+    public int closeActiveInteractionsForClass(Long classId) {
+        if (classId == null) {
+            return 0;
+        }
+        List<CourseActivity> activities = activityMapper.getCourseInteractionsByClassId(classId.intValue());
+        int closed = 0;
+        for (CourseActivity activity : activities) {
+            if (closeInteractionInternal(activity)) {
+                closed++;
+            }
+        }
+        if (closed > 0) {
+            liveEventPublisher.publishCourse(classId, "interactions_closed",
+                    java.util.Map.of("count", closed));
+        }
+        return closed;
+    }
+
+    private boolean closeInteractionInternal(CourseActivity activity) {
+        if (activity == null || !"interaction".equals(activity.getType())) {
+            return false;
+        }
         InteractionMeta meta = parseInteractionMeta(activity.getInteraction_options());
+        if (!"active".equals(meta.status)) {
+            return false;
+        }
         meta.status = "closed";
         meta.raceOpen = false;
         try {

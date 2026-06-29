@@ -34,7 +34,7 @@ public interface PrepMapper {
     @Delete("delete from teacher_prep_test_question where prep_item_id = #{prep_item_id}")
     boolean deleteQuestions(@Param("prep_item_id") Long prep_item_id);
 
-    @Insert("insert into teacher_prep_test_question (prep_item_id, question_type, stem, option_a, option_b, option_c, option_d, correct_option, score, sort_order) " +
-            "values (#{prep_item_id}, #{question_type}, #{stem}, #{option_a}, #{option_b}, #{option_c}, #{option_d}, #{correct_option}, #{score}, #{sort_order})")
+    @Insert("insert into teacher_prep_test_question (prep_item_id, question_type, stem, option_a, option_b, option_c, option_d, correct_option, score, sort_order, stem_image_url) " +
+            "values (#{prep_item_id}, #{question_type}, #{stem}, #{option_a}, #{option_b}, #{option_c}, #{option_d}, #{correct_option}, #{score}, #{sort_order}, #{stem_image_url})")
     boolean insertQuestion(TeacherPrepTestQuestion question);
 }

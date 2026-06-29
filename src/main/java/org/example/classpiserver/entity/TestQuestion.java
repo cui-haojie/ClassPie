@@ -12,6 +12,7 @@ public class TestQuestion {
     private String correct_option;
     private Integer score;
     private Integer sort_order;
+    private String stem_image_url;
 
     public Long getId() {
         return id;
@@ -99,5 +100,13 @@ public class TestQuestion {
 
     public void setSort_order(Integer sort_order) {
         this.sort_order = sort_order;
+    }
+
+    public String getStem_image_url() {
+        return stem_image_url;
+    }
+
+    public void setStem_image_url(String stem_image_url) {
+        this.stem_image_url = stem_image_url;
     }
 }

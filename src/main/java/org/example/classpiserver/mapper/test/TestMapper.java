@@ -10,8 +10,8 @@ import java.util.List;
 @Mapper
 public interface TestMapper {
 
-    @Insert("insert into course_test_question (activity_id, question_type, stem, option_a, option_b, option_c, option_d, correct_option, score, sort_order) " +
-            "values (#{activity_id}, #{question_type}, #{stem}, #{option_a}, #{option_b}, #{option_c}, #{option_d}, #{correct_option}, #{score}, #{sort_order})")
+    @Insert("insert into course_test_question (activity_id, question_type, stem, option_a, option_b, option_c, option_d, correct_option, score, sort_order, stem_image_url) " +
+            "values (#{activity_id}, #{question_type}, #{stem}, #{option_a}, #{option_b}, #{option_c}, #{option_d}, #{correct_option}, #{score}, #{sort_order}, #{stem_image_url})")
     boolean addTestQuestion(TestQuestion question);
 
     @Select("select * from course_test_question where activity_id = #{activity_id} order by sort_order asc, id asc")

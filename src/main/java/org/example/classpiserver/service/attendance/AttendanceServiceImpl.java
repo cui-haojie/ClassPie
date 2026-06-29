@@ -12,6 +12,7 @@ import org.example.classpiserver.live.LiveEventPublisher;
 import org.example.classpiserver.mapper.account.AccountMapper;
 import org.example.classpiserver.mapper.attendance.AttendanceMapper;
 import org.example.classpiserver.mapper.course.CourseMapper;
+import org.example.classpiserver.service.interaction.InteractionService;
 import org.example.classpiserver.service.notification.NotificationService;
 import org.example.classpiserver.util.HomeworkDeadlineUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +44,9 @@ public class AttendanceServiceImpl implements AttendanceService {
     @Autowired
     private NotificationService notificationService;
 
+    @Autowired
+    private InteractionService interactionService;
+
     @Override
     public AttendanceSession startAttendance(StartAttendanceRequest request) {
         if (request == null || request.getClass_id() == null || request.getTeacher_account() == null) {
@@ -54,6 +58,7 @@ public class AttendanceServiceImpl implements AttendanceService {
         AttendanceSession open = attendanceMapper.getOpenSessionByClassId(request.getClass_id());
         if (open != null) {
             attendanceMapper.closeSession(open.getId());
+            interactionService.closeActiveInteractionsForClass(request.getClass_id());
         }
         AttendanceSession session = new AttendanceSession();
         session.setClass_id(request.getClass_id());
@@ -183,6 +188,7 @@ public class AttendanceServiceImpl implements AttendanceService {
         }
         boolean ok = attendanceMapper.closeSession(sessionId);
         if (ok) {
+            interactionService.closeActiveInteractionsForClass(session.getClass_id());
             liveEventPublisher.publishCourse(session.getClass_id(), "attendance_closed",
                     java.util.Map.of("session_id", sessionId));
         }

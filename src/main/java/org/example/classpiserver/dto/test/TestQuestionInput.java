@@ -9,6 +9,7 @@ public class TestQuestionInput {
     private String option_d;
     private String correct_option;
     private Integer score;
+    private String stem_image_url;
 
     public String getQuestion_type() {
         return question_type;
@@ -72,5 +73,13 @@ public class TestQuestionInput {
 
     public void setScore(Integer score) {
         this.score = score;
+    }
+
+    public String getStem_image_url() {
+        return stem_image_url;
+    }
+
+    public void setStem_image_url(String stem_image_url) {
+        this.stem_image_url = stem_image_url;
     }
 }

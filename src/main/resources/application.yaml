@@ -33,8 +33,8 @@ classpi:
     secret: classpi-dev-secret-change-in-production-min-32-chars!!
     expire-hours: 72
   ai:
-    enabled: false
-    api-key: ${AI_API_KEY:}
-    base-url: https://api.openai.com/v1
-    model: gpt-4o-mini
-    timeout-seconds: 60
+    enabled: true
+    api-key: sk-ws-H.RYXEMHM.v58w.MEQCIHi5M5LgNLao2-pkJ3x_0A_ppk91T4mU03W0XWDLDKR_AiAcr9WiYuV3kDjRZgphzsJ_AhWt6oLs4uyx3axmHviKxA
+    base-url: https://ws-1ja9r7bon4k0s501.cn-beijing.maas.aliyuncs.com/compatible-mode/v1
+    model: qwen3.7-plus
+    timeout-seconds: 600

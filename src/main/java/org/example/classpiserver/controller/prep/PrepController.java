@@ -31,6 +31,12 @@ public class PrepController {
         return Map.of("url", stored.url());
     }
 
+    @PostMapping(value = "/uploadRichTextImage", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Map<String, String> uploadRichTextImage(@RequestParam("file") MultipartFile file) throws Exception {
+        FileStorageService.StoredFile stored = fileStorageService.saveRichTextImage(file);
+        return Map.of("url", stored.url());
+    }
+
     @PostMapping("/listPrepItems")
     public List<TeacherPrepItem> listPrepItems(@RequestBody ListPrepRequest request) {
         return prepService.listPrepItems(request);

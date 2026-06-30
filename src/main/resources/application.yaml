@@ -25,7 +25,6 @@ springdoc:
   swagger-ui:
     enabled: true
 
-# AI 辅助（OpenAI 兼容接口，如 OpenAI / DeepSeek / 通义等）
 classpi:
   auth:
     enabled: true

@@ -41,9 +41,11 @@ public interface TestMapper {
     boolean updateTestAnswerScore(@Param("submission_id") Long submission_id, @Param("question_id") Long question_id,
                                   @Param("score") Integer score);
 
-    @Update("update course_test_submission set manual_score = #{manual_score}, total_score = #{total_score}, is_fully_graded = #{is_fully_graded} where id = #{id}")
-    boolean updateTestSubmissionScores(@Param("id") Long id, @Param("manual_score") Integer manual_score,
-                                       @Param("total_score") Integer total_score, @Param("is_fully_graded") Integer is_fully_graded);
+    @Update("update course_test_submission set auto_score = #{auto_score}, manual_score = #{manual_score}, total_score = #{total_score}, is_fully_graded = #{is_fully_graded} where id = #{id}")
+    boolean updateTestSubmissionScores(@Param("id") Long id, @Param("auto_score") Integer auto_score,
+                                       @Param("manual_score") Integer manual_score,
+                                       @Param("total_score") Integer total_score,
+                                       @Param("is_fully_graded") Integer is_fully_graded);
 
     @Select("select s.*, a.name as account_name from course_test_submission s " +
             "left join accounts a on s.account = a.account " +

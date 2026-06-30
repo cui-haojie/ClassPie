@@ -209,11 +209,7 @@ public class TestServiceImpl implements TestService {
             TestSubmission submission = existingSubmission;
             if (submission != null) {
                 dto.setSubmitted(true);
-                dto.setTotal_score(submission.getTotal_score());
                 dto.setMax_score(submission.getMax_score());
-                dto.setAuto_score(submission.getAuto_score());
-                dto.setManual_score(submission.getManual_score());
-                dto.setIs_fully_graded(submission.getIs_fully_graded());
                 if (submission.getSubmit_time() != null) {
                     submission.setSubmit_time(HomeworkDeadlineUtil.formatDisplay(submission.getSubmit_time()));
                 }
@@ -235,12 +231,34 @@ public class TestServiceImpl implements TestService {
                     result.setPending("short".equals(q == null ? null : q.getQuestion_type()) && row.getScore() == null);
                     answerResults.put(row.getQuestion_id(), result);
                 }
+                int autoFromAnswers = sumAutoGradedScores(answerRows);
+                int storedAuto = submission.getAuto_score() == null ? 0 : submission.getAuto_score();
+                int storedTotal = submission.getTotal_score() == null ? 0 : submission.getTotal_score();
+                int resolvedAuto = Math.max(storedAuto, autoFromAnswers);
+                int resolvedTotal = Math.max(storedTotal, resolvedAuto);
+                if (shortCount == 0) {
+                    resolvedTotal = Math.max(resolvedTotal, autoFromAnswers);
+                    resolvedAuto = resolvedTotal;
+                    dto.setIs_fully_graded(true);
+                    dto.setManual_score(0);
+                    dto.setAuto_score(resolvedAuto);
+                    dto.setTotal_score(resolvedTotal);
+                    if (storedAuto != resolvedAuto || storedTotal != resolvedTotal
+                            || !Boolean.TRUE.equals(submission.getIs_fully_graded())) {
+                        testMapper.updateTestSubmissionScores(submission.getId(), resolvedAuto, 0, resolvedTotal, 1);
+                    }
+                } else {
+                    dto.setAuto_score(storedAuto);
+                    dto.setManual_score(submission.getManual_score());
+                    dto.setTotal_score(submission.getTotal_score());
+                    dto.setIs_fully_graded(submission.getIs_fully_graded());
+                }
                 dto.setMy_answers(answers);
                 dto.setAnswer_results(answerResults);
             }
         }
         if (isTeacher) {
-            dto.setSubmissions(buildTestSubmissionSummaries(activityId));
+            dto.setSubmissions(buildTestSubmissionSummaries(activityId, shortCount));
         }
         return dto;
     }
@@ -306,11 +324,13 @@ public class TestServiceImpl implements TestService {
         for (TestQuestion question : questions) {
             String answer = answerMap.getOrDefault(question.getId(), "");
             if ("choice".equals(question.getQuestion_type())) {
-                boolean correct = question.getCorrect_option() != null
-                        && question.getCorrect_option().equalsIgnoreCase(answer);
+                String normalizedAnswer = normalizeChoiceOption(answer);
+                String normalizedCorrect = normalizeChoiceOption(question.getCorrect_option());
+                boolean correct = normalizedCorrect != null
+                        && normalizedCorrect.equals(normalizedAnswer);
                 int qScore = correct ? (question.getScore() == null ? 0 : question.getScore()) : 0;
                 autoScore += qScore;
-                testMapper.addTestAnswerScored(submission.getId(), question.getId(), answer, qScore,
+                testMapper.addTestAnswerScored(submission.getId(), question.getId(), normalizedAnswer, qScore,
                         correct ? 1 : 0, 1);
             } else {
                 testMapper.addTestAnswerScored(submission.getId(), question.getId(), answer, null, null, 0);
@@ -319,6 +339,7 @@ public class TestServiceImpl implements TestService {
         submission.setAuto_score(autoScore);
         submission.setTotal_score(autoScore);
         testMapper.updateTestSubmissionScores(submission.getId(),
+                autoScore,
                 shortCount > 0 ? null : 0,
                 autoScore,
                 shortCount == 0 ? 1 : 0);
@@ -433,7 +454,7 @@ public class TestServiceImpl implements TestService {
         }
     }
 
-    private List<TestSubmissionSummaryDTO> buildTestSubmissionSummaries(Long activityId) {
+    private List<TestSubmissionSummaryDTO> buildTestSubmissionSummaries(Long activityId, int shortCount) {
         List<TestSubmission> rows = testMapper.getTestSubmissionsByActivityId(activityId);
         List<TestSubmissionSummaryDTO> list = new ArrayList<>();
         for (TestSubmission row : rows) {
@@ -441,11 +462,26 @@ public class TestServiceImpl implements TestService {
             item.setSubmission_id(row.getId());
             item.setAccount(row.getAccount());
             item.setAccount_name(row.getAccount_name());
-            item.setAuto_score(row.getAuto_score());
-            item.setManual_score(row.getManual_score());
-            item.setTotal_score(row.getTotal_score());
             item.setMax_score(row.getMax_score());
-            item.setIs_fully_graded(row.getIs_fully_graded());
+            int storedAuto = row.getAuto_score() == null ? 0 : row.getAuto_score();
+            int storedTotal = row.getTotal_score() == null ? 0 : row.getTotal_score();
+            if (shortCount == 0) {
+                int autoFromAnswers = sumAutoGradedScores(testMapper.getTestAnswersFullBySubmissionId(row.getId()));
+                int resolved = Math.max(Math.max(storedAuto, storedTotal), autoFromAnswers);
+                item.setAuto_score(resolved);
+                item.setManual_score(0);
+                item.setTotal_score(resolved);
+                item.setIs_fully_graded(true);
+                if (storedAuto != resolved || storedTotal != resolved
+                        || !Boolean.TRUE.equals(row.getIs_fully_graded())) {
+                    testMapper.updateTestSubmissionScores(row.getId(), resolved, 0, resolved, 1);
+                }
+            } else {
+                item.setAuto_score(storedAuto);
+                item.setManual_score(row.getManual_score());
+                item.setTotal_score(row.getTotal_score());
+                item.setIs_fully_graded(row.getIs_fully_graded());
+            }
             if (row.getSubmit_time() != null) {
                 item.setSubmit_time(HomeworkDeadlineUtil.formatDisplay(row.getSubmit_time()));
             }
@@ -460,10 +496,11 @@ public class TestServiceImpl implements TestService {
             return;
         }
         List<TestAnswer> answers = testMapper.getTestAnswersFullBySubmissionId(submissionId);
+        int auto = sumAutoGradedScores(answers);
         int manual = 0;
         boolean allShortGraded = true;
         for (TestAnswer answer : answers) {
-            if (Boolean.TRUE.equals(answer.getIs_auto_graded())) {
+            if (isAutoGraded(answer)) {
                 continue;
             }
             if (answer.getScore() == null) {
@@ -472,9 +509,41 @@ public class TestServiceImpl implements TestService {
                 manual += answer.getScore();
             }
         }
-        int auto = submission.getAuto_score() == null ? 0 : submission.getAuto_score();
         int total = auto + manual;
-        testMapper.updateTestSubmissionScores(submissionId, manual, total, allShortGraded ? 1 : 0);
+        testMapper.updateTestSubmissionScores(submissionId, auto, manual, total, allShortGraded ? 1 : 0);
+    }
+
+    private int sumAutoGradedScores(List<TestAnswer> answers) {
+        int sum = 0;
+        if (answers == null) {
+            return 0;
+        }
+        for (TestAnswer answer : answers) {
+            if (!isAutoGraded(answer)) {
+                continue;
+            }
+            sum += answer.getScore() == null ? 0 : answer.getScore();
+        }
+        return sum;
+    }
+
+    private boolean isAutoGraded(TestAnswer answer) {
+        return answer != null && Boolean.TRUE.equals(answer.getIs_auto_graded());
+    }
+
+    private String normalizeChoiceOption(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim().toUpperCase();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        char first = trimmed.charAt(0);
+        if (first >= 'A' && first <= 'D') {
+            return String.valueOf(first);
+        }
+        return trimmed;
     }
 
     @Override

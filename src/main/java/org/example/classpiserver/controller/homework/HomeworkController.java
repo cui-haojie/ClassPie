@@ -45,12 +45,12 @@ public class HomeworkController {
 
     @PostMapping("/getHomeworkByClassId")
     public List<Homework> getHomeworkByClassId(@RequestBody ClassIdRequest request) {
-        return homeworkService.getHomeworkByClassId(request.getClass_id());
+        return homeworkService.getHomeworkByClassId(request.getClass_id(), request.getAccount());
     }
 
     @PostMapping("/getHomeworkById")
     public Homework getHomeworkById(@RequestBody HomeworkIdRequest request) {
-        return homeworkService.getHomeworkById(request.getHomework_id());
+        return homeworkService.getHomeworkById(request.getHomework_id(), request.getAccount());
     }
 
     @PostMapping("/getContentById")

@@ -46,6 +46,9 @@ public interface HomeworkMapper {
     @Select("select count(*) from content where content_id = #{content_id} and account = #{account}")
     Integer countContentSubmission(@Param("content_id") Long content_id, @Param("account") String account);
 
+    @Select("select * from content where content_id = #{content_id} and account = #{account} limit 1")
+    Content getContentByAccount(@Param("content_id") Long content_id, @Param("account") String account);
+
     @Select("SELECT ac.account FROM account_course ac LEFT JOIN content c ON c.account = ac.account AND c.content_id = #{contentId} WHERE ac.class_id = #{classId} AND ac.is_archived = 0 AND c.account IS NULL")
     List<String> getUnsubmittedAccounts(@Param("classId") Integer classId, @Param("contentId") Long contentId);
 

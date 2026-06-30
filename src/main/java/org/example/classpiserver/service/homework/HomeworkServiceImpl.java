@@ -66,21 +66,23 @@ public class HomeworkServiceImpl implements HomeworkService {
     }
 
     @Override
-    public List<Homework> getHomeworkByClassId(Integer classId) {
+    public List<Homework> getHomeworkByClassId(Integer classId, String account) {
         List<Homework> homeworkList = new ArrayList<>();
         for (Integer homeworkId : homeworkMapper.getHomeworkIdsByClassId(classId)) {
             Homework homework = homeworkMapper.getHomework(homeworkId);
             normalizeHomeworkDeadline(homework);
             fillHomeworkSubmissionStats(homework, classId.longValue());
+            fillStudentSubmissionStatus(homework, account);
             homeworkList.add(homework);
         }
         return homeworkList;
     }
 
     @Override
-    public Homework getHomeworkById(Integer homeworkId) {
+    public Homework getHomeworkById(Integer homeworkId, String account) {
         Homework homework = homeworkMapper.getHomework(homeworkId);
         normalizeHomeworkDeadline(homework);
+        fillStudentSubmissionStatus(homework, account);
         return homework;
     }
 
@@ -104,12 +106,17 @@ public class HomeworkServiceImpl implements HomeworkService {
         if (contentId == null || account == null || account.isBlank()) {
             return false;
         }
-        Integer existing = homeworkMapper.countContentSubmission(contentId, account);
+        String normalizedAccount = account.trim();
+        Homework homework = homeworkMapper.getHomeworkByContentOrId(contentId);
+        if (homework == null) {
+            return false;
+        }
+        long submissionContentId = resolveSubmissionContentId(homework);
+        Integer existing = homeworkMapper.countContentSubmission(submissionContentId, normalizedAccount);
         if (existing != null && existing > 0) {
             return false;
         }
-        Homework homework = homeworkMapper.getHomeworkByContentOrId(contentId);
-        if (homework != null && HomeworkDeadlineUtil.isDeadlinePassed(homework.getDeadline())) {
+        if (HomeworkDeadlineUtil.isDeadlinePassed(homework.getDeadline())) {
             return false;
         }
         String text = details == null ? "" : details.trim();
@@ -128,8 +135,8 @@ public class HomeworkServiceImpl implements HomeworkService {
             return false;
         }
         Content content = new Content();
-        content.setContent_id(contentId);
-        content.setAccount(account);
+        content.setContent_id(submissionContentId);
+        content.setAccount(normalizedAccount);
         content.setScore(0);
         content.setDetails(text.isEmpty() ? "（附件提交）" : text);
         content.setAttachment_url(attachmentUrl);
@@ -147,8 +154,8 @@ public class HomeworkServiceImpl implements HomeworkService {
         if (homework == null) {
             return false;
         }
-        Long contentId = homework.getContent_id() > 0 ? (long) homework.getContent_id() : request.getHomework_id().longValue();
-        List<String> accounts = homeworkMapper.getUnsubmittedAccounts(request.getClass_id(), contentId);
+        long submissionContentId = homework.getHomework_id();
+        List<String> accounts = homeworkMapper.getUnsubmittedAccounts(request.getClass_id(), submissionContentId);
         if (accounts.isEmpty()) {
             return false;
         }
@@ -176,17 +183,46 @@ public class HomeworkServiceImpl implements HomeworkService {
         return homeworkMapper.deleteHomeworkById(homeworkId);
     }
 
+    private long resolveSubmissionContentId(Homework homework) {
+        if (homework == null) {
+            return 0L;
+        }
+        // content 表 FK 指向 homework.homework_id；与 homework.content_id 字段无关
+        return homework.getHomework_id();
+    }
+
     private void fillHomeworkSubmissionStats(Homework homework, Long classId) {
         if (homework == null) {
             return;
         }
-        long contentId = homework.getContent_id() > 0 ? homework.getContent_id() : homework.getHomework_id();
+        long contentId = resolveSubmissionContentId(homework);
         Integer graded = homeworkMapper.countGradedSubmissions(contentId);
         Integer ungraded = homeworkMapper.countUngradedSubmissions(contentId);
         Integer unsubmitted = homeworkMapper.countUnsubmittedStudents(classId, contentId);
         homework.setGraded_count(graded == null ? 0 : graded);
         homework.setUngraded_count(ungraded == null ? 0 : ungraded);
         homework.setUnsubmitted_count(unsubmitted == null ? 0 : unsubmitted);
+    }
+
+    private void fillStudentSubmissionStatus(Homework homework, String account) {
+        if (homework == null || account == null || account.isBlank()) {
+            return;
+        }
+        String normalizedAccount = account.trim();
+        long contentId = resolveSubmissionContentId(homework);
+        Content submission = homeworkMapper.getContentByAccount(contentId, normalizedAccount);
+        if (submission == null && homework.getContent_id() > 0 && homework.getContent_id() != homework.getHomework_id()) {
+            submission = homeworkMapper.getContentByAccount((long) homework.getContent_id(), normalizedAccount);
+        }
+        if (submission == null) {
+            homework.setMy_submitted(false);
+            homework.setMy_graded(false);
+            homework.setMy_score(null);
+            return;
+        }
+        homework.setMy_submitted(true);
+        homework.setMy_graded(Boolean.TRUE.equals(submission.getIs_graded()));
+        homework.setMy_score(submission.getScore());
     }
 
     private void normalizeHomeworkDeadline(Homework homework) {

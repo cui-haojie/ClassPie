@@ -1,5 +1,7 @@
 package org.example.classpiserver.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class Homework {
     private int homework_id;
     private String submitter;
@@ -17,6 +19,16 @@ public class Homework {
     private int unsubmitted_count;
     private String attachment_url;
     private String attachment_name;
+
+    /** 当前学生是否已提交（列表接口传入 account 时填充） */
+    @JsonProperty("my_submitted")
+    private Boolean my_submitted;
+    /** 当前学生是否已被批阅 */
+    @JsonProperty("my_graded")
+    private Boolean my_graded;
+    /** 当前学生得分 */
+    @JsonProperty("my_score")
+    private Integer my_score;
 
     public String getAttachment_url() {
         return attachment_url;
@@ -136,5 +148,29 @@ public class Homework {
 
     public void setUnsubmitted_count(int unsubmitted_count) {
         this.unsubmitted_count = unsubmitted_count;
+    }
+
+    public Boolean getMy_submitted() {
+        return my_submitted;
+    }
+
+    public void setMy_submitted(Boolean my_submitted) {
+        this.my_submitted = my_submitted;
+    }
+
+    public Boolean getMy_graded() {
+        return my_graded;
+    }
+
+    public void setMy_graded(Boolean my_graded) {
+        this.my_graded = my_graded;
+    }
+
+    public Integer getMy_score() {
+        return my_score;
+    }
+
+    public void setMy_score(Integer my_score) {
+        this.my_score = my_score;
     }
 }

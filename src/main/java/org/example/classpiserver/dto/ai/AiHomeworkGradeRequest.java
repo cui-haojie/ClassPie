@@ -5,6 +5,8 @@ public class AiHomeworkGradeRequest {
     private String homework_name;
     private String homework_description;
     private String student_answer;
+    private String student_attachment_url;
+    private String student_attachment_name;
     private Integer max_score;
 
     public String getTeacher_account() {
@@ -37,6 +39,22 @@ public class AiHomeworkGradeRequest {
 
     public void setStudent_answer(String student_answer) {
         this.student_answer = student_answer;
+    }
+
+    public String getStudent_attachment_url() {
+        return student_attachment_url;
+    }
+
+    public void setStudent_attachment_url(String student_attachment_url) {
+        this.student_attachment_url = student_attachment_url;
+    }
+
+    public String getStudent_attachment_name() {
+        return student_attachment_name;
+    }
+
+    public void setStudent_attachment_name(String student_attachment_name) {
+        this.student_attachment_name = student_attachment_name;
     }
 
     public Integer getMax_score() {

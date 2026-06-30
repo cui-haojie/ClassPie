@@ -40,6 +40,8 @@ public class AiController {
                     request.getHomework_name(),
                     request.getHomework_description(),
                     request.getStudent_answer(),
+                    request.getStudent_attachment_url(),
+                    request.getStudent_attachment_name(),
                     maxScore
             );
         } catch (Exception ex) {

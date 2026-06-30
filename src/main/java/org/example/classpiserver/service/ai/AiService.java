@@ -10,6 +10,7 @@ import org.example.classpiserver.dto.ai.AiStatusDTO;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.example.classpiserver.util.AttachmentTextExtractor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -39,9 +40,11 @@ public class AiService {
 
     private final AiProperties aiProperties;
     private final RestClient restClient;
+    private final AttachmentTextExtractor attachmentTextExtractor;
 
-    public AiService(AiProperties aiProperties) {
+    public AiService(AiProperties aiProperties, AttachmentTextExtractor attachmentTextExtractor) {
         this.aiProperties = aiProperties;
+        this.attachmentTextExtractor = attachmentTextExtractor;
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(15));
         factory.setReadTimeout(Duration.ofSeconds(Math.max(15, aiProperties.getTimeoutSeconds())));
@@ -58,9 +61,19 @@ public class AiService {
     }
 
     public AiGradeSuggestionDTO suggestHomeworkGrade(String homeworkName, String homeworkDescription,
-                                                     String studentAnswer, int maxScore) {
+                                                     String studentAnswer, String attachmentUrl,
+                                                     String attachmentName, int maxScore) {
         if (!aiProperties.isConfigured()) {
             return AiGradeSuggestionDTO.unavailable(configHint());
+        }
+        String attachmentSection = attachmentTextExtractor.describeForAi(attachmentUrl, attachmentName);
+        String answerText = safe(studentAnswer);
+        if (attachmentSection != null && !attachmentSection.isBlank()) {
+            if ("（未提供）".equals(answerText) || "（附件提交）".equals(answerText)) {
+                answerText = attachmentSection;
+            } else {
+                answerText = answerText + "\n\n" + attachmentSection;
+            }
         }
         String userPrompt = """
                 作业名称：%s
@@ -72,7 +85,7 @@ public class AiService {
                 safe(homeworkName),
                 safe(homeworkDescription),
                 maxScore,
-                safe(studentAnswer)
+                answerText
         );
         return parseGradeSuggestion(chat(GRADE_SYSTEM_PROMPT, userPrompt), maxScore);
     }

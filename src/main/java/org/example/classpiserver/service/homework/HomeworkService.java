@@ -10,8 +10,8 @@ import java.util.List;
 public interface HomeworkService {
     boolean addHomework(Homework homework, Integer classId, MultipartFile attachment);
     Integer getCountByClassId(Integer classId);
-    List<Homework> getHomeworkByClassId(Integer classId);
-    Homework getHomeworkById(Integer homeworkId);
+    List<Homework> getHomeworkByClassId(Integer classId, String account);
+    Homework getHomeworkById(Integer homeworkId, String account);
     List<Content> getContentById(Long contentId);
     boolean setContentScore(int newScore, Long contentId, String account);
     boolean addContent(Content content);
